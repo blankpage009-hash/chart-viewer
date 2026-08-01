@@ -147,6 +147,7 @@ async function deleteFile(name) {
 /* ── 3. 즐겨찾기 · 공항 정보 (작은 값이라 localStorage) ────────── */
 const KEY_FAV = 'ncv.favorites';
 const KEY_APT = 'ncv.airports';
+const KEY_APT_FAV = 'ncv.favAirports';
 
 function load(key, fallback) {
   try { return JSON.parse(localStorage.getItem(key)) ?? fallback; }
@@ -156,8 +157,9 @@ function save(key, value) {
   try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* 저장 실패는 무시 */ }
 }
 
-let favorites = load(KEY_FAV, []);
-let airports  = load(KEY_APT, {});
+let favorites   = load(KEY_FAV, []);
+let airports    = load(KEY_APT, {});
+let favAirports = load(KEY_APT_FAV, []);
 
 /* 저장 공간 안내 (알아낸 뒤에만 목록 아래에 덧붙인다) */
 let storageNote = '';
@@ -266,7 +268,7 @@ function renderGroupedList(container, list, opts = {}) {
       nav.className = 'apt-filters';
       nav.dataset.icao = icao;
       nav.innerHTML = ['ALL', ...TYPES].map(t => {
-        const shown = t === 'ALL' ? '전체' : (t === 'ETC' ? '기타' : t);
+        const shown = t === 'ALL' ? 'ALL' : (t === 'ETC' ? 'etc' : t);
         return `<button class="apt-filter-btn${t === sel ? ' is-on' : ''}" data-type="${t}">${shown}</button>`;
       }).join('');
       group.appendChild(nav);
@@ -308,7 +310,17 @@ function renderAll() {
     ? `차트 ${CHARTS.length}개 · ${fmtSize(bytes)}${storageNote}`
     : '';
 
+  renderFavAirportChips();
   panes.forEach((_, i) => updateBar(i));
+}
+
+/* 즐겨찾기한 공항을 검색창 옆에 칩으로 나열. 누르면 그 공항으로 바로 검색된다 */
+function renderFavAirportChips() {
+  const box = $('#fav-airports');
+  box.innerHTML = favAirports.map(icao =>
+    `<button class="fav-apt-chip" data-apt-jump="${esc(icao)}"
+             title="${esc(airports[icao]?.name || icao)}">${esc(icao)}</button>`
+  ).join('');
 }
 
 /* ── 7. 뷰어 ──────────────────────────────────────────────────── */
@@ -764,7 +776,11 @@ function renderAirportTable() {
   codes.forEach(icao => {
     const row = document.createElement('div');
     row.className = 'apt-row';
-    row.innerHTML = `<span class="code">${esc(icao)}</span>
+    const isFav = favAirports.includes(icao);
+    row.innerHTML = `
+      <button class="apt-fav-toggle${isFav ? ' is-on' : ''}" data-apt-fav="${esc(icao)}"
+              title="공항 즐겨찾기">${isFav ? '★' : '☆'}</button>
+      <span class="code">${esc(icao)}</span>
       <input data-apt="${esc(icao)}" data-field="name"    placeholder="공항 이름 (예: Gimpo Intl)">
       <input data-apt="${esc(icao)}" data-field="country" placeholder="국가 (예: Korea)">`;
     row.querySelector('[data-field="name"]').value    = airports[icao].name || '';
@@ -772,6 +788,26 @@ function renderAirportTable() {
     box.appendChild(row);
   });
 }
+
+$('#airport-table').addEventListener('click', e => {
+  const favBtn = e.target.closest('[data-apt-fav]');
+  if (!favBtn) return;
+  const icao = favBtn.dataset.aptFav;
+  const at = favAirports.indexOf(icao);
+  if (at >= 0) favAirports.splice(at, 1); else favAirports.push(icao);
+  save(KEY_APT_FAV, favAirports);
+  favBtn.classList.toggle('is-on');
+  favBtn.textContent = favAirports.includes(icao) ? '★' : '☆';
+  renderFavAirportChips();
+});
+
+$('#fav-airports').addEventListener('click', e => {
+  const chip = e.target.closest('[data-apt-jump]');
+  if (!chip) return;
+  $('#search').value = chip.dataset.aptJump;
+  state.query = chip.dataset.aptJump;
+  renderAll();
+});
 
 $('#airport-table').addEventListener('input', e => {
   const input = e.target.closest('[data-apt]');
