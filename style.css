@@ -57,7 +57,7 @@ button { font-family: inherit; cursor: pointer; }
 }
 
 .brand {
-  height: 26px;
+  height: 32px;
   width: auto;
   display: block;
   /* 로고 원본은 흰 바탕에 검은 글자다. 색을 반전(검은 글자→흰 글자, 흰 바탕→검은 바탕)한 뒤
@@ -102,8 +102,8 @@ button { font-family: inherit; cursor: pointer; }
 .text-btn.primary { background: var(--accent); }
 .text-btn.primary:hover { background: #3a8ee2; }
 
-/* 검색창 (예전 크기의 절반 정도로 줄임) */
-.search-wrap { position: relative; flex: 0 1 130px; min-width: 90px; max-width: 240px; }
+/* 검색창 */
+.search-wrap { position: relative; flex: 0 1 195px; min-width: 135px; max-width: 360px; }
 .search-wrap input {
   width: 100%;
   height: 40px;
@@ -216,6 +216,13 @@ button { font-family: inherit; cursor: pointer; }
 
 /* 공항 묶음 */
 .apt-group { border-bottom: 1px solid var(--line); }
+/* 공항 코드와 종류 필터는 스크롤해도 사이드바 위쪽에 붙어 있는다 (Favorite 제목줄까지 붙일 필요는 없음) */
+.apt-head-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #fbfcfd;
+}
 .apt-head {
   display: flex;
   align-items: baseline;

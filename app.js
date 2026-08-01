@@ -251,13 +251,18 @@ function renderGroupedList(container, list, opts = {}) {
 
     const group = document.createElement('div');
     group.className = 'apt-group';
+
+    // 공항 코드 + 종류 필터는 스크롤해도 위에 붙어 있도록 한 덩어리로 묶는다
+    const head = document.createElement('div');
+    head.className = 'apt-head-sticky';
     // 이름·국가 입력은 상단 [공항 정보] 창에서만 한다 (목록 머리글을 눌러 여는 기능은 없앰)
-    group.innerHTML = `<div class="apt-head">
+    head.innerHTML = `<div class="apt-head">
         <span class="apt-icao">${esc(icao)}</span>
         ${label
           ? `<span class="apt-name">${esc(label)}</span>`
           : '<span class="apt-name apt-empty">이름 미입력</span>'}
       </div>`;
+    group.appendChild(head);
 
     let rows = charts;
     if (opts.withFilter) {
@@ -269,7 +274,7 @@ function renderGroupedList(container, list, opts = {}) {
         const shown = t === 'ALL' ? 'ALL' : (t === 'ETC' ? 'etc' : t);
         return `<button class="apt-filter-btn${t === sel ? ' is-on' : ''}" data-type="${t}">${shown}</button>`;
       }).join('');
-      group.appendChild(nav);
+      head.appendChild(nav);
       rows = sel === 'ALL' ? charts : charts.filter(c => c.type === sel);
     }
 
