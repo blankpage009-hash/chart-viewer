@@ -177,6 +177,8 @@ button { font-family: inherit; cursor: pointer; }
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   transition: margin-left .18s ease;
+  /* 오른쪽 차트 칸의 아래쪽 여백과 맞춰서, 두 영역의 바닥선이 같은 높이에서 끝나게 한다 */
+  margin-bottom: calc(8px + env(safe-area-inset-bottom));
 }
 .layout.sidebar-hidden .sidebar { margin-left: calc(var(--sidebar-w) * -1); }
 
@@ -486,6 +488,19 @@ button { font-family: inherit; cursor: pointer; }
 }
 
 .sidebar-scrim { display: none; }
+
+/* ── 차트 전체 화면 보기 ──────────────────────
+   상단 바·사이드바를 감추고, 보고 있던 칸 하나만 화면 전체를 채운다 */
+body.is-fullscreen .topbar,
+body.is-fullscreen .sidebar,
+body.is-fullscreen .sidebar-scrim { display: none !important; }
+body.is-fullscreen .viewers {
+  gap: 0;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right)
+           env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+body.is-fullscreen .viewer { border-radius: 0; border-width: 0; }
+body.is-fullscreen .viewer:not(.is-active) { display: none; }
 
 /* ── 화면이 좁을 때 (휴대폰 · 창을 많이 줄였을 때) ── */
 @media (max-width: 900px) {

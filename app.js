@@ -180,6 +180,7 @@ const state = {
   query: '',
   split: false,
   activePane: 0,
+  fullscreen: false,     // 전체 화면 보기 (상단 바·사이드바를 감추고 차트 하나만 채움)
   groupType: {}          // 공항(ICAO)별로 따로 고르는 종류 필터. 비어 있으면 'ALL'
 };
 
@@ -343,6 +344,10 @@ function updateBar(i) {
   const favBtn = view.querySelector('[data-act="fav"]');
   favBtn.classList.toggle('is-fav', !!isFav);
   favBtn.textContent = isFav ? '★' : '☆';
+
+  const fsBtn = view.querySelector('[data-act="fullscreen"]');
+  fsBtn.classList.toggle('is-on', state.fullscreen);
+  fsBtn.title = state.fullscreen ? '전체 화면 나가기' : '전체 화면';
 
   view.querySelector('.zoom-label').textContent = Math.round(p.zoom * 100) + '%';
 
@@ -743,6 +748,15 @@ $('#viewers').addEventListener('click', async e => {
       return;
     case 'prev': await loadPage(i, p.pageNum - 1); return;
     case 'next': await loadPage(i, p.pageNum + 1); return;
+    case 'fullscreen': {
+      state.fullscreen = !state.fullscreen;
+      if (state.fullscreen) state.activePane = i;
+      document.body.classList.toggle('is-fullscreen', state.fullscreen);
+      panes.forEach((_, k) => updateBar(k));
+      // 칸 크기가 바뀌었으니 화면 맞춤 배율을 다시 계산해서 다시 그린다
+      for (const k of [0, 1]) if (panes[k].page) await drawPage(k);
+      return;
+    }
     case 'fav': {
       if (!p.file) return;
       const at = favorites.indexOf(p.file);
