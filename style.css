@@ -27,6 +27,8 @@
 
 html, body {
   height: 100%;
+  /* 아이폰 사파리는 아래 주소창 때문에 100%가 화면보다 짧게 잡힌다. dvh 는 그 값을 실제 보이는 높이로 맞춰준다 */
+  height: 100dvh;
   margin: 0;
   overflow: hidden;                 /* 뷰어 안에서만 스크롤되게 */
   display: flex;
@@ -177,8 +179,9 @@ button { font-family: inherit; cursor: pointer; }
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   transition: margin-left .18s ease;
-  /* 오른쪽 차트 칸의 아래쪽 여백과 맞춰서, 두 영역의 바닥선이 같은 높이에서 끝나게 한다 */
-  margin-bottom: calc(8px + env(safe-area-inset-bottom));
+  /* 오른쪽 차트 칸의 아래쪽 여백과 맞춰서, 두 영역의 바닥선이 같은 높이에서 끝나게 한다.
+     화면을 최대한 채우려고 여백은 없애고, 홈 인디케이터(가로 막대) 자리만 남긴다 */
+  margin-bottom: env(safe-area-inset-bottom);
 }
 .layout.sidebar-hidden .sidebar { margin-left: calc(var(--sidebar-w) * -1); }
 
@@ -305,18 +308,18 @@ button { font-family: inherit; cursor: pointer; }
 .chart-no    { font-size: 12px; font-weight: 700; color: var(--accent); }
 .chart-title { font-size: 12.5px; line-height: 1.35; word-break: break-word; }
 
-.star-btn, .del-btn {
+/* 차트를 지우는 일은 설정 창의 Files 칸에서만 한다 (목록의 휴지통 버튼은 없앴다) */
+.star-btn {
   flex: 0 0 auto;
   width: 32px; height: 34px;
+  margin-right: 4px;
   border: 0; border-radius: 6px;
   background: transparent;
   color: #c3ccd6;
   font-size: 17px;
 }
-.star-btn:hover, .del-btn:hover { background: #e7ecf2; }
+.star-btn:hover { background: #e7ecf2; }
 .star-btn.is-on { color: var(--star); }
-.del-btn { margin-right: 4px; font-size: 13px; opacity: .35; }
-.del-btn:hover { opacity: 1; }
 
 /* 왼쪽 목록 맨 아래 보관 현황 */
 .store-info {
@@ -331,9 +334,9 @@ button { font-family: inherit; cursor: pointer; }
   flex: 1 1 auto;
   min-width: 0;
   display: flex;
-  gap: 8px;
-  /* 아래쪽은 홈 인디케이터(가로 막대) 자리를 피한다 */
-  padding: 8px calc(8px + env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) 8px;
+  gap: 5px;
+  /* 차트를 최대한 크게 보려고 테두리 여백은 최소로 하고, 아래는 홈 인디케이터(가로 막대) 자리만 남긴다 */
+  padding: 4px calc(4px + env(safe-area-inset-right)) env(safe-area-inset-bottom) 4px;
 }
 
 .viewer {
@@ -380,7 +383,7 @@ button { font-family: inherit; cursor: pointer; }
   background: #dfe4ea;
   display: grid;
   place-items: safe center;
-  padding: 8px;
+  padding: 3px;
   touch-action: pan-x pan-y;      /* 두 손가락 확대는 앱이 직접 처리 */
 }
 
@@ -421,11 +424,12 @@ button { font-family: inherit; cursor: pointer; }
   box-shadow: 0 8px 26px rgba(0,0,0,.25);
 }
 
-/* ── 공항 정보 창 ─────────────────────────── */
+/* ── 설정 창 ──────────────────────────────── */
 .modal-scrim {
   position: fixed; inset: 0; z-index: 60;
   display: flex; align-items: center; justify-content: center;
-  padding: 18px;
+  /* 상단 시계·하단 홈 인디케이터 자리를 피해서 창을 띄운다 */
+  padding: calc(14px + env(safe-area-inset-top)) 14px calc(14px + env(safe-area-inset-bottom));
   background: rgba(14, 28, 44, .5);
 }
 .modal {
@@ -444,6 +448,60 @@ button { font-family: inherit; cursor: pointer; }
 .modal-head .icon-btn { background: #eceff3; color: var(--text); }
 .modal-note { margin: 0; padding: 12px 18px 6px; font-size: 12.5px; color: var(--text-dim); }
 .airport-table { flex: 1 1 auto; overflow-y: auto; padding: 6px 18px 18px; }
+
+/* 설정 창 위쪽 탭 (Airport · Files) */
+.modal-tabs {
+  display: flex;
+  gap: 6px;
+  padding: 10px 18px 0;
+  border-bottom: 1px solid var(--line);
+}
+.tab-btn {
+  height: 36px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 8px 8px 0 0;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 14px;
+  font-weight: 700;
+}
+.tab-btn:hover { background: #f2f5f8; }
+.tab-btn.is-on { background: #e8f0fb; color: var(--accent); box-shadow: inset 0 -2px 0 var(--accent); }
+
+/* 탭 하나가 창의 남은 높이를 다 쓰고, 그 안의 목록만 스크롤되게 한다 */
+.tab-panel { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+
+/* Files 칸 */
+.file-tools {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--line);
+}
+.check-all { display: flex; align-items: center; gap: 6px; font-size: 13px; white-space: nowrap; }
+.check-all input, .file-row input { width: 18px; height: 18px; accent-color: var(--accent); }
+.file-sum { flex: 1 1 auto; min-width: 0; font-size: 12px; color: var(--text-dim); }
+.text-btn.danger { background: #d0483f; color: #fff; }
+.text-btn.danger:hover { background: #e0574d; }
+.text-btn.danger:disabled { background: #e3e7ec; color: #a7b1bd; cursor: default; }
+
+.file-table { flex: 1 1 auto; overflow-y: auto; padding: 4px 18px 18px; }
+.file-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 4px;
+  border-bottom: 1px solid #f0f3f6;
+  cursor: pointer;
+}
+.file-row:hover { background: #f5f8fb; }
+.file-info { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+.file-main { font-size: 12.5px; line-height: 1.35; word-break: break-word; }
+.file-sub  { font-size: 11px; color: var(--text-dim);
+             overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-size { flex: 0 0 auto; font-size: 11.5px; color: var(--text-dim); }
 .apt-row { display: flex; gap: 8px; align-items: center; padding: 5px 0; }
 .apt-row .apt-fav-toggle {
   flex: 0 0 auto;

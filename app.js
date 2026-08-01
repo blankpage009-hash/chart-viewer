@@ -148,6 +148,7 @@ async function deleteFile(name) {
 const KEY_FAV = 'ncv.favorites';
 const KEY_APT = 'ncv.airports';
 const KEY_APT_FAV = 'ncv.favAirports';
+const KEY_ROT = 'ncv.rotations';
 
 function load(key, fallback) {
   try { return JSON.parse(localStorage.getItem(key)) ?? fallback; }
@@ -160,6 +161,8 @@ function save(key, value) {
 let favorites   = load(KEY_FAV, []);
 let airports    = load(KEY_APT, {});
 let favAirports = load(KEY_APT_FAV, []);
+/* 차트마다 마지막으로 돌려 본 방향. 다시 열 때 그 방향 그대로 보여 준다 */
+let rotations   = load(KEY_ROT, {});
 
 /* 저장 공간 안내 (알아낸 뒤에만 목록 아래에 덧붙인다) */
 let storageNote = '';
@@ -183,6 +186,9 @@ const state = {
   fullscreen: false,     // 전체 화면 보기 (상단 바·사이드바를 감추고 차트 하나만 채움)
   groupType: {}          // 공항(ICAO)별로 따로 고르는 종류 필터. 비어 있으면 'ALL'
 };
+
+/* 설정 창 Files 칸에서 체크해 둔 파일 이름들 */
+const selectedFiles = new Set();
 
 function newPane() {
   return {
@@ -228,8 +234,7 @@ function chartRow(chart) {
       </span>
     </button>
     <button class="star-btn${isFav ? ' is-on' : ''}" data-star="${esc(chart.file)}"
-            title="즐겨찾기">${isFav ? '★' : '☆'}</button>
-    <button class="del-btn" data-del="${esc(chart.file)}" title="이 차트 지우기">🗑</button>`;
+            title="즐겨찾기">${isFav ? '★' : '☆'}</button>`;
   return row;
 }
 
@@ -299,7 +304,7 @@ function renderAll() {
       ? '<p class="empty-note">검색창에 ICAO·공항 이름·국가를 입력하면 여기에 나타납니다.</p>'
       : (CHARTS.length
           ? '<p class="empty-note">조건에 맞는 차트가 없습니다. 검색어를 확인해보세요.</p>'
-          : '<p class="empty-note">아직 넣어둔 차트가 없습니다.<br>오른쪽 위 <b>＋ PDF 추가</b>를 눌러 차트를 넣어주세요.</p>');
+          : '<p class="empty-note">아직 넣어둔 차트가 없습니다.<br>오른쪽 위 <b>Upload</b> 를 눌러 차트를 넣어주세요.</p>');
   }
 
   const favList = CHARTS.filter(c => favorites.includes(c.file));
@@ -376,8 +381,8 @@ async function drawPage(i) {
   const canvas = canvasEl(i);
   const base = p.page.getViewport({ scale: 1, rotation: p.rot });
 
-  const availW = Math.max(80, body.clientWidth  - 16);
-  const availH = Math.max(80, body.clientHeight - 16);
+  const availW = Math.max(80, body.clientWidth  - 6);   // .viewer-body 안쪽 여백(3px씩)만큼 뺀다
+  const availH = Math.max(80, body.clientHeight - 6);
   p.fitScale = Math.min(availW / base.width, availH / base.height);
 
   const cssW = base.width  * p.fitScale * p.zoom;
@@ -453,7 +458,7 @@ async function openChart(file) {
     p.doc = doc;
     p.numPages = doc.numPages;
     p.zoom = 1;
-    p.rot = 0;
+    p.rot = rotations[file] || 0;      // 지난번에 돌려 본 방향 그대로
     await loadPage(i, 1);
   } catch (err) {
     console.error(err);
@@ -630,17 +635,29 @@ async function addFiles(fileList) {
   toast(msg || '변경된 내용이 없습니다.');
 }
 
-async function removeChart(file) {
-  const c = CHARTS.find(x => x.file === file);
-  const label = c ? `${c.icao} ${c.no} ${c.title}` : file;
-  if (!confirm(`이 차트를 지울까요?\n\n${label}\n\n(원본 PDF 파일은 그대로 있습니다)`)) return;
+/* 차트 지우기는 설정 창의 Files 칸에서만 한다. 한 번에 여러 개를 지울 수 있다 */
+async function removeCharts(files) {
+  if (!files.length) return;
+  const one = files.length === 1
+    ? (() => { const c = CHARTS.find(x => x.file === files[0]);
+               return c ? `${c.icao} ${c.no} ${c.title}` : files[0]; })()
+    : `${files.length}개`;
+  if (!confirm(`${one}\n\n이 차트를 지울까요?\n(원본 PDF 파일은 그대로 있습니다)`)) return;
 
-  await deleteFile(file);
-  favorites = favorites.filter(f => f !== file);
+  busy('차트를 지우는 중…');
+  for (const file of files) {
+    await deleteFile(file);
+    delete rotations[file];
+    panes.forEach((p, i) => { if (p.file === file) closePane(i); });
+  }
+  favorites = favorites.filter(f => !files.includes(f));
   save(KEY_FAV, favorites);
-  panes.forEach((p, i) => { if (p.file === file) closePane(i); });
+  save(KEY_ROT, rotations);
+  selectedFiles.clear();
+
+  busy(null);
   await refreshLibrary();
-  toast('차트를 지웠습니다.');
+  toast(`차트 ${files.length}개를 지웠습니다.`);
 }
 
 async function refreshLibrary() {
@@ -665,6 +682,9 @@ async function refreshLibrary() {
   if (changed) save(KEY_APT, airports);
 
   renderAll();
+  // 설정 창을 열어 둔 채로 차트가 늘거나 줄면 그 안의 두 목록도 같이 맞춰 준다.
+  // (renderAll 이 아니라 여기서 하는 이유: 이름을 한 글자 칠 때마다 다시 그리면 입력 칸이 풀린다)
+  if (!$('#settings-modal').hidden) { renderAirportTable(); renderFileTable(); }
 }
 
 /* ── 10. 화면 연결 ────────────────────────────────────────────── */
@@ -687,9 +707,6 @@ $('#sidebar').addEventListener('click', e => {
     renderAll();
     return;
   }
-
-  const del = e.target.closest('[data-del]');
-  if (del) { removeChart(del.dataset.del); return; }
 
   const star = e.target.closest('[data-star]');
   if (star) {
@@ -716,6 +733,41 @@ $('#btn-sidebar').addEventListener('click', () =>
   $('#layout').classList.toggle('sidebar-hidden'));
 $('#sidebar-scrim').addEventListener('click', () =>
   $('#layout').classList.add('sidebar-hidden'));
+
+/* 손가락으로 목록 열고 닫기 (아이패드·아이폰).
+   '열기'는 화면 왼쪽 가장자리에서 시작한 쓸기만 인정한다.
+   그래야 차트 위를 손가락으로 미는 동작(이동·확대)과 부딪히지 않는다 */
+function attachSidebarSwipe() {
+  const layout = $('#layout');
+  const EDGE  = 34;   // 가장자리로 인정하는 폭
+  const MIN_X = 55;   // 이만큼은 옆으로 그어야 반응한다
+  let sx = 0, sy = 0, watching = false;
+
+  document.addEventListener('touchstart', e => {
+    watching = false;
+    if (e.touches.length !== 1) return;                       // 두 손가락 확대는 건드리지 않는다
+    if (document.body.classList.contains('is-fullscreen')) return;
+    if (!$('#settings-modal').hidden) return;
+
+    const t = e.touches[0];
+    sx = t.clientX;
+    sy = t.clientY;
+    watching = layout.classList.contains('sidebar-hidden')
+      ? sx <= EDGE
+      : (sx <= EDGE || !!e.target.closest('#sidebar, #sidebar-scrim'));
+  }, { passive: true });
+
+  document.addEventListener('touchend', e => {
+    if (!watching) return;
+    watching = false;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - sx;
+    const dy = t.clientY - sy;
+    // 위아래로 그은 것(목록 스크롤)은 무시한다
+    if (Math.abs(dx) < MIN_X || Math.abs(dx) < Math.abs(dy) * 1.2) return;
+    layout.classList.toggle('sidebar-hidden', dx < 0);
+  }, { passive: true });
+}
 
 $('#btn-split').addEventListener('click', async () => {
   state.split = !state.split;
@@ -744,6 +796,8 @@ $('#viewers').addEventListener('click', async e => {
       if (!p.page) return;
       p.rot = (p.rot + 90) % 360;
       p.zoom = 1;
+      // 다음에 같은 차트를 열 때도 이 방향으로 보이도록 기억해 둔다
+      if (p.file) { rotations[p.file] = p.rot; save(KEY_ROT, rotations); }
       await drawPage(i);
       return;
     case 'prev': await loadPage(i, p.pageNum - 1); return;
@@ -777,7 +831,7 @@ $('#viewers').addEventListener('click', async e => {
   }
 });
 
-/* 공항 정보 */
+/* 설정 창 — Airport 칸 (공항 이름 · 국가) */
 function renderAirportTable() {
   const box = $('#airport-table');
   box.innerHTML = '';
@@ -831,22 +885,82 @@ $('#airport-table').addEventListener('input', e => {
   renderAll();
 });
 
-/* focusIcao 를 주면 그 공항 칸으로 스크롤해서 바로 입력하게 한다 */
-function openAirportModal(focusIcao) {
-  renderAirportTable();
-  $('#airport-modal').hidden = false;
-  if (!focusIcao) return;
-  const input = $(`#airport-table [data-apt="${CSS.escape(focusIcao)}"][data-field="name"]`);
-  if (!input) return;
-  input.closest('.apt-row').classList.add('is-target');
-  input.scrollIntoView({ block: 'center' });
-  input.focus();
+/* 설정 창 — Files 칸 (넣어둔 PDF 전체 관리) */
+function renderFileTable() {
+  // 지워진 파일이 선택 상태로 남아 있지 않게 정리한다
+  selectedFiles.forEach(f => { if (!CHARTS.some(c => c.file === f)) selectedFiles.delete(f); });
+
+  const box = $('#file-table');
+  box.innerHTML = CHARTS.length
+    ? CHARTS.map(c => `
+        <label class="file-row">
+          <input type="checkbox" data-file="${esc(c.file)}"${selectedFiles.has(c.file) ? ' checked' : ''}>
+          <span class="badge badge-${c.type}">${esc(c.type === 'ETC' ? (c.rawType || 'ETC') : c.type)}</span>
+          <span class="file-info">
+            <span class="file-main">${esc(c.icao)} ${esc(c.no)} ${esc(c.title)}</span>
+            <span class="file-sub">${esc(c.file)}</span>
+          </span>
+          <span class="file-size">${fmtSize(c.size || 0)}</span>
+        </label>`).join('')
+    : '<p class="empty-note">아직 넣어둔 차트가 없습니다.<br>오른쪽 위 <b>Upload</b> 를 눌러 차트를 넣어주세요.</p>';
+
+  updateFileTools();
 }
 
-$('#btn-airports').addEventListener('click', () => openAirportModal());
-$('#airport-modal').addEventListener('click', e => {
-  if (e.target.id === 'airport-modal' || e.target.closest('[data-close-modal]'))
-    $('#airport-modal').hidden = true;
+function updateFileTools() {
+  const total = CHARTS.length;
+  const bytes = CHARTS.reduce((sum, c) => sum + (c.size || 0), 0);
+  const picked = selectedFiles.size;
+
+  $('#file-sum').textContent = total ? `전체 ${total}개 · ${fmtSize(bytes)}` : '';
+
+  const del = $('#btn-file-del');
+  del.disabled = !picked;
+  del.textContent = picked ? `선택 ${picked}개 삭제` : '선택 삭제';
+
+  const all = $('#file-all');
+  all.checked = total > 0 && picked === total;
+  all.indeterminate = picked > 0 && picked < total;
+}
+
+$('#file-table').addEventListener('change', e => {
+  const box = e.target.closest('[data-file]');
+  if (!box) return;
+  if (box.checked) selectedFiles.add(box.dataset.file);
+  else selectedFiles.delete(box.dataset.file);
+  updateFileTools();
+});
+
+$('#file-all').addEventListener('change', e => {
+  selectedFiles.clear();
+  if (e.target.checked) CHARTS.forEach(c => selectedFiles.add(c.file));
+  $$('#file-table [data-file]').forEach(box => { box.checked = e.target.checked; });
+  updateFileTools();
+});
+
+$('#btn-file-del').addEventListener('click', () => removeCharts([...selectedFiles]));
+
+/* 설정 창 열고 닫기 · 탭 바꾸기 */
+function showTab(name) {
+  $$('#modal-tabs .tab-btn').forEach(b => b.classList.toggle('is-on', b.dataset.tab === name));
+  $$('#settings-modal .tab-panel').forEach(p => { p.hidden = p.dataset.panel !== name; });
+}
+
+function openSettings(tab = 'airport') {
+  renderAirportTable();
+  renderFileTable();
+  showTab(tab);
+  $('#settings-modal').hidden = false;
+}
+
+$('#btn-settings').addEventListener('click', () => openSettings());
+$('#modal-tabs').addEventListener('click', e => {
+  const btn = e.target.closest('.tab-btn');
+  if (btn) showTab(btn.dataset.tab);
+});
+$('#settings-modal').addEventListener('click', e => {
+  if (e.target.id === 'settings-modal' || e.target.closest('[data-close-modal]'))
+    $('#settings-modal').hidden = true;
 });
 
 /* PDF 넣기 */
@@ -918,6 +1032,7 @@ navigator.storage?.persist?.()
   .catch(() => {});
 
 [0, 1].forEach(i => { attachPinch(i); attachPan(i); });
+attachSidebarSwipe();
 refreshLibrary().catch(err => {
   console.error(err);
   toast('저장 공간을 열지 못했습니다. 브라우저의 시크릿 모드에서는 동작하지 않습니다.');
