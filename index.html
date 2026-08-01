@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <!-- 두 손가락 확대는 앱이 직접 처리하므로 화면 자체 확대는 막는다 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Chart Viewer</title>
+
+  <!-- 홈 화면에 앱처럼 설치되기 위한 정보 -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.png">
+  <link rel="apple-touch-icon" href="icon.png">
+  <meta name="theme-color" content="#123a5e">
+  <!-- 아이패드에서 홈 화면 아이콘으로 열면 주소창 없이 전체 화면으로 뜬다 -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Charts">
+
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ── 상단 바 ───────────────────────────────── -->
+  <header class="topbar">
+    <button id="btn-sidebar" class="icon-btn" title="목록 접기/펴기">☰</button>
+
+    <div class="brand">Chart&nbsp;Viewer</div>
+
+    <div class="search-wrap">
+      <input id="search" type="search" placeholder="ICAO · 공항 이름 · 국가로 검색  (예: RKSS, Gimpo, Korea)"
+             autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false">
+      <button id="btn-search-clear" class="clear-btn" title="지우기">×</button>
+    </div>
+
+    <nav class="type-filters" id="type-filters">
+      <button class="type-btn is-on" data-type="ALL">전체</button>
+      <button class="type-btn" data-type="SID">SID</button>
+      <button class="type-btn" data-type="STAR">STAR</button>
+      <button class="type-btn" data-type="APP">APP</button>
+      <button class="type-btn" data-type="TAXI">TAXI</button>
+      <button class="type-btn" data-type="ETC">기타</button>
+    </nav>
+
+    <div class="top-actions">
+      <button id="btn-split" class="icon-btn" title="차트 두 개 나란히 보기">▯▯</button>
+      <button id="btn-airports" class="text-btn">공항 정보</button>
+      <button id="btn-add" class="text-btn primary">＋ PDF 추가</button>
+      <!-- 실제 파일 선택창. 화면에는 보이지 않고 [PDF 추가] 버튼이 대신 누른다 -->
+      <input id="file-input" type="file" accept="application/pdf,.pdf" multiple hidden>
+    </div>
+  </header>
+
+  <!-- ── 본문 ─────────────────────────────────── -->
+  <div class="layout" id="layout">
+
+    <!-- 왼쪽 목록 -->
+    <aside class="sidebar" id="sidebar">
+      <section class="list-section">
+        <button class="section-head" data-toggle="fav-body">
+          <span class="caret">▾</span> 즐겨찾기 <span class="count" id="fav-count">0</span>
+        </button>
+        <div class="section-body" id="fav-body"></div>
+      </section>
+
+      <section class="list-section">
+        <button class="section-head" data-toggle="result-body">
+          <span class="caret">▾</span> 검색 결과 <span class="count" id="result-count">0</span>
+        </button>
+        <div class="section-body" id="result-body"></div>
+      </section>
+
+      <footer class="store-info" id="store-info"></footer>
+    </aside>
+
+    <div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+    <!-- 가운데 차트 보는 곳 -->
+    <main class="viewers" id="viewers">
+
+      <section class="viewer is-active" data-pane="0">
+        <div class="viewer-bar">
+          <span class="viewer-title">차트를 선택하세요</span>
+          <span class="spacer"></span>
+          <span class="page-nav" hidden>
+            <button class="icon-btn small" data-act="prev" title="이전 장">‹</button>
+            <span class="page-label">1 / 1</span>
+            <button class="icon-btn small" data-act="next" title="다음 장">›</button>
+          </span>
+          <button class="icon-btn small" data-act="zoom-out" title="축소">－</button>
+          <button class="icon-btn small zoom-label" data-act="fit" title="화면에 맞춤">100%</button>
+          <button class="icon-btn small" data-act="zoom-in" title="확대">＋</button>
+          <button class="icon-btn small" data-act="rotate" title="회전">⟳</button>
+          <button class="icon-btn small" data-act="fav" title="즐겨찾기">☆</button>
+          <button class="icon-btn small" data-act="close" title="닫기">×</button>
+        </div>
+        <div class="viewer-body">
+          <div class="chart-stage">
+            <canvas class="chart-canvas" hidden></canvas>
+            <div class="chart-placeholder">
+              <p class="ph-hint">왼쪽 목록에서 차트를 고르세요</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="viewer" data-pane="1" hidden>
+        <div class="viewer-bar">
+          <span class="viewer-title">차트를 선택하세요</span>
+          <span class="spacer"></span>
+          <span class="page-nav" hidden>
+            <button class="icon-btn small" data-act="prev" title="이전 장">‹</button>
+            <span class="page-label">1 / 1</span>
+            <button class="icon-btn small" data-act="next" title="다음 장">›</button>
+          </span>
+          <button class="icon-btn small" data-act="zoom-out" title="축소">－</button>
+          <button class="icon-btn small zoom-label" data-act="fit" title="화면에 맞춤">100%</button>
+          <button class="icon-btn small" data-act="zoom-in" title="확대">＋</button>
+          <button class="icon-btn small" data-act="rotate" title="회전">⟳</button>
+          <button class="icon-btn small" data-act="fav" title="즐겨찾기">☆</button>
+          <button class="icon-btn small" data-act="close" title="닫기">×</button>
+        </div>
+        <div class="viewer-body">
+          <div class="chart-stage">
+            <canvas class="chart-canvas" hidden></canvas>
+            <div class="chart-placeholder">
+              <p class="ph-hint">왼쪽 목록에서 차트를 고르세요</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- ── 공항 정보 입력 창 ─────────────────────── -->
+  <div class="modal-scrim" id="airport-modal" hidden>
+    <div class="modal">
+      <div class="modal-head">
+        <h2>공항 이름 · 국가</h2>
+        <button class="icon-btn" data-close-modal>×</button>
+      </div>
+      <p class="modal-note">여기에 적은 이름과 국가로도 검색됩니다. 고치면 바로 저장됩니다.</p>
+      <div class="airport-table" id="airport-table"></div>
+      <div class="modal-foot">
+        <button class="text-btn primary" data-close-modal>닫기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 진행 표시 ────────────────────────────── -->
+  <div class="busy" id="busy" hidden><div class="busy-box" id="busy-text"></div></div>
+
+  <!-- ── 안내 토스트 ──────────────────────────── -->
+  <div class="toast" id="toast" hidden></div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

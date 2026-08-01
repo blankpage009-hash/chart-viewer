@@ -1,0 +1,15 @@
+{
+  "name": "Chart Viewer",
+  "short_name": "Charts",
+  "description": "공항별 차트 PDF를 넣어두고 인터넷 없이 보는 뷰어",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#ffffff",
+  "theme_color": "#123a5e",
+  "icons": [
+    { "src": "./icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "./icon.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
