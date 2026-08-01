@@ -10,6 +10,7 @@ server.js
 # 공개해도 괜찮다면 아래 세 줄을 지우면 다음 올릴 때부터 같이 올라간다
 PLAN.md
 HANDOFF.md
+CLAUDE.md
 배포 방법.md
 
 # 윈도우가 만드는 잡파일
