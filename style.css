@@ -60,7 +60,10 @@ button { font-family: inherit; cursor: pointer; }
   height: 26px;
   width: auto;
   display: block;
-  border-radius: 5px;
+  /* 로고 원본은 흰 바탕에 검은 글자다. 색을 반전(검은 글자→흰 글자, 흰 바탕→검은 바탕)한 뒤
+     screen 방식으로 겹치면, 검게 된 바탕은 남색과 섞여 사라지고 흰 글자만 남는다 */
+  filter: invert(1);
+  mix-blend-mode: screen;
 }
 
 .icon-btn {
