@@ -4,7 +4,7 @@
 
 /* ★★ 앱을 고쳐서 다시 올릴 때는 아래 번호를 1 올릴 것 (ncv-v1 → ncv-v2).
        안 올리면 아이패드가 예전 화면을 계속 쓴다. ★★ */
-const CACHE = 'ncv-v1';
+const CACHE = 'ncv-v2';   // v2: 아이콘 교체 (2026-08-01)
 
 const APP_FILES = [
   './',
