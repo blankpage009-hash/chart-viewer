@@ -176,9 +176,9 @@ let CHARTS = [];
 
 const state = {
   query: '',
-  type: 'ALL',
   split: false,
-  activePane: 0
+  activePane: 0,
+  groupType: {}          // 공항(ICAO)별로 따로 고르는 종류 필터. 비어 있으면 'ALL'
 };
 
 function newPane() {
@@ -207,10 +207,6 @@ function matches(chart, q) {
   return q.toLowerCase().split(/\s+/).filter(Boolean).every(w => hay.includes(w));
 }
 
-function visibleCharts() {
-  return CHARTS.filter(c =>
-    (state.type === 'ALL' || c.type === state.type) && matches(c, state.query));
-}
 
 /* ── 6. 목록 그리기 ───────────────────────────────────────────── */
 function chartRow(chart) {
@@ -243,7 +239,9 @@ function groupByAirport(list) {
   return map;
 }
 
-function renderList(container, list) {
+/* opts.withFilter 가 있으면 공항 묶음마다 종류 필터(전체·SID·STAR·APP·TAXI·기타)를 따로 붙인다.
+   검색 결과에서만 쓰고, 즐겨찾기에는 필요 없다고 해서 안 붙인다 */
+function renderGroupedList(container, list, opts = {}) {
   container.innerHTML = '';
   groupByAirport(list).forEach((charts, icao) => {
     const apt = airports[icao] || {};
@@ -260,25 +258,46 @@ function renderList(container, list) {
           ? `<span class="apt-name">${esc(label)}</span>`
           : '<span class="apt-name apt-empty">＋ 공항 이름·국가 입력</span>'}
       </button>`;
-    charts.forEach(c => group.appendChild(chartRow(c)));
+
+    let rows = charts;
+    if (opts.withFilter) {
+      const sel = state.groupType[icao] || 'ALL';
+      const nav = document.createElement('nav');
+      nav.className = 'apt-filters';
+      nav.dataset.icao = icao;
+      nav.innerHTML = ['ALL', ...TYPES].map(t => {
+        const shown = t === 'ALL' ? '전체' : (t === 'ETC' ? '기타' : t);
+        return `<button class="apt-filter-btn${t === sel ? ' is-on' : ''}" data-type="${t}">${shown}</button>`;
+      }).join('');
+      group.appendChild(nav);
+      rows = sel === 'ALL' ? charts : charts.filter(c => c.type === sel);
+    }
+
+    if (opts.withFilter && !rows.length) {
+      group.insertAdjacentHTML('beforeend', '<p class="empty-note">이 종류의 차트가 없습니다.</p>');
+    } else {
+      rows.forEach(c => group.appendChild(chartRow(c)));
+    }
     container.appendChild(group);
   });
 }
 
 function renderAll() {
-  const list = visibleCharts();
+  const q = state.query;
+  const searchList = q ? CHARTS.filter(c => matches(c, q)) : [];
 
-  renderList($('#result-body'), list);
-  $('#result-count').textContent = list.length;
-  if (!list.length) {
-    $('#result-body').innerHTML = CHARTS.length
-      ? '<p class="empty-note">조건에 맞는 차트가 없습니다. 검색어를 지우거나 종류를 [전체]로 바꿔보세요.</p>'
-      : '<p class="empty-note">아직 넣어둔 차트가 없습니다.<br>오른쪽 위 <b>＋ PDF 추가</b>를 눌러 차트를 넣어주세요.</p>';
+  renderGroupedList($('#result-body'), searchList, { withFilter: true });
+  $('#result-count').textContent = searchList.length;
+  if (!searchList.length) {
+    $('#result-body').innerHTML = !q
+      ? '<p class="empty-note">검색창에 ICAO·공항 이름·국가를 입력하면 여기에 나타납니다.</p>'
+      : (CHARTS.length
+          ? '<p class="empty-note">조건에 맞는 차트가 없습니다. 검색어를 확인해보세요.</p>'
+          : '<p class="empty-note">아직 넣어둔 차트가 없습니다.<br>오른쪽 위 <b>＋ PDF 추가</b>를 눌러 차트를 넣어주세요.</p>');
   }
 
-  const favList = CHARTS.filter(c => favorites.includes(c.file))
-    .filter(c => state.type === 'ALL' || c.type === state.type);
-  renderList($('#fav-body'), favList);
+  const favList = CHARTS.filter(c => favorites.includes(c.file));
+  renderGroupedList($('#fav-body'), favList);
   $('#fav-count').textContent = favorites.filter(f => CHARTS.some(c => c.file === f)).length;
   if (!favList.length) {
     $('#fav-body').innerHTML = '<p class="empty-note">차트 옆 ☆ 을 누르면 여기에 담깁니다.</p>';
@@ -640,15 +659,15 @@ $('#btn-search-clear').addEventListener('click', () => {
   $('#search').focus();
 });
 
-$('#type-filters').addEventListener('click', e => {
-  const btn = e.target.closest('.type-btn');
-  if (!btn) return;
-  state.type = btn.dataset.type;
-  $$('.type-btn').forEach(b => b.classList.toggle('is-on', b === btn));
-  renderAll();
-});
-
 $('#sidebar').addEventListener('click', e => {
+  const filterBtn = e.target.closest('.apt-filter-btn');
+  if (filterBtn) {
+    const icao = filterBtn.closest('.apt-filters').dataset.icao;
+    state.groupType[icao] = filterBtn.dataset.type;
+    renderAll();
+    return;
+  }
+
   const aptEdit = e.target.closest('[data-apt-edit]');
   if (aptEdit) { openAirportModal(aptEdit.dataset.aptEdit); return; }
 
