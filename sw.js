@@ -4,7 +4,7 @@
 
 /* ★★ 앱을 고쳐서 다시 올릴 때는 아래 번호를 1 올릴 것 (ncv-v1 → ncv-v2).
        안 올리면 아이패드가 예전 화면을 계속 쓴다. ★★ */
-const CACHE = 'ncv-v5';   // v5: 필터 한 줄로, 공항 즐겨찾기 칩, 검색창 축소 (2026-08-01)
+const CACHE = 'ncv-v6';   // v6: 로고 이미지, 문구 크기, 사이드바 헤더 클릭 제거, 아이콘 축소 (2026-08-01)
 
 const APP_FILES = [
   './',
@@ -13,6 +13,7 @@ const APP_FILES = [
   './app.js',
   './manifest.webmanifest',
   './icon.png',
+  './jeppesen_icon.png',
   './pdfjs/pdf.min.mjs',
   './pdfjs/pdf.worker.min.mjs'
 ];

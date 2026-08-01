@@ -251,15 +251,13 @@ function renderGroupedList(container, list, opts = {}) {
 
     const group = document.createElement('div');
     group.className = 'apt-group';
-    // 머리글을 누르면 그 공항의 이름·국가를 바로 입력할 수 있다.
-    // 비어 있으면 검색이 ICAO 로만 되므로 눈에 띄게 표시한다
-    group.innerHTML = `<button class="apt-head" data-apt-edit="${esc(icao)}"
-        title="공항 이름·국가 입력">
+    // 이름·국가 입력은 상단 [공항 정보] 창에서만 한다 (목록 머리글을 눌러 여는 기능은 없앰)
+    group.innerHTML = `<div class="apt-head">
         <span class="apt-icao">${esc(icao)}</span>
         ${label
           ? `<span class="apt-name">${esc(label)}</span>`
-          : '<span class="apt-name apt-empty">＋ 공항 이름·국가 입력</span>'}
-      </button>`;
+          : '<span class="apt-name apt-empty">이름 미입력</span>'}
+      </div>`;
 
     let rows = charts;
     if (opts.withFilter) {
@@ -679,9 +677,6 @@ $('#sidebar').addEventListener('click', e => {
     renderAll();
     return;
   }
-
-  const aptEdit = e.target.closest('[data-apt-edit]');
-  if (aptEdit) { openAirportModal(aptEdit.dataset.aptEdit); return; }
 
   const del = e.target.closest('[data-del]');
   if (del) { removeChart(del.dataset.del); return; }

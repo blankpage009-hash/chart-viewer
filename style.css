@@ -57,10 +57,10 @@ button { font-family: inherit; cursor: pointer; }
 }
 
 .brand {
-  font-weight: 700;
-  font-size: 15px;
-  letter-spacing: .3px;
-  white-space: nowrap;
+  height: 26px;
+  width: auto;
+  display: block;
+  border-radius: 5px;
 }
 
 .icon-btn {
@@ -187,7 +187,7 @@ button { font-family: inherit; cursor: pointer; }
   border-bottom: 1px solid var(--line);
   background: #f6f8fa;
   color: var(--text);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   text-align: left;
 }
@@ -220,17 +220,12 @@ button { font-family: inherit; cursor: pointer; }
   width: 100%;
   padding: 9px 12px 6px;
   background: #fbfcfd;
-  border: 0;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
 }
-.apt-head:hover { background: #eef3f9; }
 .apt-icao { font-size: 13px; font-weight: 700; letter-spacing: .5px; }
 .apt-name { font-size: 11.5px; color: var(--text-dim); overflow: hidden;
             text-overflow: ellipsis; white-space: nowrap; }
-/* 이름·국가가 비어 있으면 ICAO 로만 검색되므로 눈에 띄게 */
-.apt-empty { color: var(--accent); font-weight: 600; }
+/* 이름·국가가 비어 있음을 알려주기만 하고, 눌러도 되는 것처럼 강조하지는 않는다 */
+.apt-empty { font-style: italic; }
 
 /* 검색 결과에서 공항마다 따로 두는 종류 필터 (ALL·SID·STAR·APP·TAXI·etc). 한 줄에 다 들어오도록 촘촘히 */
 .apt-filters {
