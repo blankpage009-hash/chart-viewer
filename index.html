@@ -43,7 +43,15 @@
     </nav>
 
     <div class="top-actions">
-      <button id="btn-split" class="icon-btn" title="차트 두 개 나란히 보기">▯▯</button>
+      <!-- 글자(▯▯)는 사이가 벌어져서, 간격을 직접 정할 수 있는 그림으로 그린다 -->
+      <button id="btn-split" class="icon-btn" title="차트 두 개 나란히 보기">
+        <svg class="split-icon" width="20" height="16" viewBox="0 0 20 16" aria-hidden="true">
+          <rect x="1.1" y="1.1" width="8.1" height="13.8" rx="1.6"
+                fill="none" stroke="currentColor" stroke-width="1.6"/>
+          <rect x="10.8" y="1.1" width="8.1" height="13.8" rx="1.6"
+                fill="none" stroke="currentColor" stroke-width="1.6"/>
+        </svg>
+      </button>
       <button id="btn-airports" class="text-btn">공항 정보</button>
       <button id="btn-add" class="text-btn primary">＋ PDF 추가</button>
       <!-- 실제 파일 선택창. 화면에는 보이지 않고 [PDF 추가] 버튼이 대신 누른다 -->
@@ -58,14 +66,14 @@
     <aside class="sidebar" id="sidebar">
       <section class="list-section">
         <button class="section-head" data-toggle="fav-body">
-          <span class="caret">▾</span> 즐겨찾기 <span class="count" id="fav-count">0</span>
+          <span class="caret">▾</span> Favorite <span class="count" id="fav-count">0</span>
         </button>
         <div class="section-body" id="fav-body"></div>
       </section>
 
       <section class="list-section">
         <button class="section-head" data-toggle="result-body">
-          <span class="caret">▾</span> 검색 결과 <span class="count" id="result-count">0</span>
+          <span class="caret">▾</span> Result <span class="count" id="result-count">0</span>
         </button>
         <div class="section-body" id="result-body"></div>
       </section>

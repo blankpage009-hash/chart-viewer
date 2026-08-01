@@ -9,7 +9,7 @@
   --text:        #1c2733;
   --text-dim:    #667487;
   --star:        #f0a419;
-  --topbar-h:    58px;
+  --topbar-h:    50px;
   --sidebar-w:   290px;
 }
 
@@ -42,11 +42,14 @@ button { font-family: inherit; cursor: pointer; }
 /* ── 상단 바 ──────────────────────────────── */
 .topbar {
   flex: 0 0 auto;
-  min-height: var(--topbar-h);
+  /* 아이패드 홈 화면 앱은 시계·배터리 자리까지 화면을 쓴다.
+     그 높이(safe-area-inset-top)만큼 위에 여백을 두어 글자가 겹치지 않게 한다 */
+  min-height: calc(var(--topbar-h) + env(safe-area-inset-top));
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 0 12px;
+  padding: env(safe-area-inset-top) calc(12px + env(safe-area-inset-right))
+           0 calc(12px + env(safe-area-inset-left));
   background: var(--navy);
   color: #fff;
   position: relative;
@@ -130,6 +133,18 @@ button { font-family: inherit; cursor: pointer; }
 .type-btn.is-on { background: #fff; color: var(--navy); }
 
 .top-actions { display: flex; gap: 6px; margin-left: auto; }
+
+/* 상단 바 버튼·검색창은 차트가 더 넓게 보이도록 낮게 맞춘다 (공항 정보 창의 버튼은 그대로) */
+.topbar .icon-btn,
+.topbar .text-btn,
+.type-btn,
+.search-wrap input { height: 34px; }
+.topbar .icon-btn { min-width: 34px; font-size: 16px; }
+.search-wrap input { font-size: 14px; }
+.clear-btn { top: 3px; width: 28px; height: 28px; font-size: 17px; }
+
+/* 나란히 보기 아이콘: 네모 두 개를 바짝 붙여 그린다 */
+.split-icon { display: block; margin: 0 auto; }
 
 /* ── 본문 배치 ────────────────────────────── */
 .layout {
@@ -272,7 +287,8 @@ button { font-family: inherit; cursor: pointer; }
   min-width: 0;
   display: flex;
   gap: 8px;
-  padding: 8px;
+  /* 아래쪽은 홈 인디케이터(가로 막대) 자리를 피한다 */
+  padding: 8px calc(8px + env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) 8px;
 }
 
 .viewer {
@@ -445,7 +461,8 @@ button { font-family: inherit; cursor: pointer; }
 }
 
 @media (max-width: 620px) {
-  .topbar { flex-wrap: wrap; padding: 8px; gap: 8px; }
+  .topbar { flex-wrap: wrap; gap: 8px;
+            padding: calc(8px + env(safe-area-inset-top)) 8px 8px; }
   .search-wrap { order: 3; flex: 1 1 100%; max-width: none; }
   .type-filters { order: 2; flex: 1 1 auto; }
   .top-actions { order: 1; }
