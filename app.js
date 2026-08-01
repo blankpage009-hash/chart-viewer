@@ -963,6 +963,8 @@ $('#fav-airports').addEventListener('click', e => {
   $('#search').value = chip.dataset.aptJump;
   state.query = chip.dataset.aptJump;
   renderAll();
+  // 좁은 화면에서 차트를 보고 있어 목록이 접혀 있던 경우, 검색 결과를 바로 보도록 펼친다
+  $('#layout').classList.remove('sidebar-hidden');
 });
 
 $('#airport-table').addEventListener('input', e => {

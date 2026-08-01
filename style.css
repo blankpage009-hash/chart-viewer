@@ -85,8 +85,9 @@ button { font-family: inherit; cursor: pointer; }
 .icon-btn svg { display: block; }
 .icon-btn:hover  { background: rgba(255,255,255,.22); }
 .icon-btn.is-on  { background: var(--accent); }
-.icon-btn.small  { min-width: 34px; height: 34px; font-size: 16px;
+.icon-btn.small  { min-width: 38px; height: 38px; font-size: 18px;
                    background: transparent; color: var(--text-dim); }
+.icon-btn.small svg { width: 18px; height: 18px; }
 .icon-btn.small:hover { background: #e7ecf2; color: var(--text); }
 .icon-btn.small.is-fav { color: var(--star); }
 
@@ -195,7 +196,7 @@ button { font-family: inherit; cursor: pointer; }
   border-bottom: 1px solid var(--line);
   background: #f6f8fa;
   color: var(--text);
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
   text-align: left;
 }
@@ -574,7 +575,8 @@ body.is-fullscreen .viewer:not(.is-active) { display: none; }
 
 /* ── 화면이 좁을 때 (휴대폰 · 창을 많이 줄였을 때) ── */
 @media (max-width: 900px) {
-  .brand { display: none; }
+  /* 좁은 화면에서도 로고는 보이게 하되, 다른 요소가 밀리지 않도록 작게 줄인다 */
+  .brand { height: 24px; }
   .text-btn { padding: 0 9px; font-size: 13px; }
 
   /* 좁은 화면에서는 목록이 본문을 밀지 않고 위에 겹쳐 뜨게 */
@@ -595,6 +597,7 @@ body.is-fullscreen .viewer:not(.is-active) { display: none; }
 @media (max-width: 620px) {
   .topbar { flex-wrap: wrap; gap: 8px;
             padding: calc(8px + env(safe-area-inset-top)) 8px 8px; }
+  .brand { height: 20px; }               /* 첫 줄(목록 버튼 · 로고 · 세팅 · Upload)에 다 들어오도록 더 줄인다 */
   .search-wrap { order: 2; flex: 1 1 100%; max-width: none; }
   .fav-airports { order: 3; max-width: 100%; }
   .top-actions { order: 1; }
