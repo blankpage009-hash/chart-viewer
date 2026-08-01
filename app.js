@@ -1050,6 +1050,12 @@ $('#file-search').addEventListener('input', () => {
   selectedFiles.clear();
   renderFileTable();
 });
+$('#btn-file-search-clear').addEventListener('click', () => {
+  $('#file-search').value = '';
+  selectedFiles.clear();
+  renderFileTable();
+  $('#file-search').focus();
+});
 
 $('#btn-file-del').addEventListener('click', () => removeCharts([...selectedFiles]));
 

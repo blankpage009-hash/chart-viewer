@@ -126,13 +126,14 @@ button { font-family: inherit; cursor: pointer; }
 }
 .clear-btn:hover { background: #eceff3; }
 
-/* 즐겨찾기한 공항 칩 (검색창 오른쪽) */
+/* 즐겨찾기한 공항 칩 (검색창 오른쪽). 8개 정도는 한 번에 보이고, 더 있으면 손가락으로 옆으로 밀어서 본다 */
 .fav-airports {
   display: flex;
   align-items: center;
   gap: 5px;
   overflow-x: auto;
-  max-width: 220px;
+  -webkit-overflow-scrolling: touch;
+  max-width: 480px;
 }
 .fav-airports::-webkit-scrollbar { display: none; }
 .fav-apt-chip {
@@ -372,7 +373,10 @@ button { font-family: inherit; cursor: pointer; }
 
 .page-nav { display: flex; align-items: center; gap: 2px; }
 .page-label { font-size: 12px; color: var(--text-dim); min-width: 44px; text-align: center; }
-.zoom-label { min-width: 48px; font-size: 12px; font-weight: 600; }
+.zoom-label { min-width: 48px; font-weight: 600; }
+/* .icon-btn.small 이 아이콘 크기를 18px로 올리면서 "100%" 글자도 같이 커졌다.
+   세 클래스짜리 선택자로 우선순위를 더 높여서 이 글자만 따로 2px 줄인다 */
+.icon-btn.small.zoom-label { font-size: 16px; }
 
 /* 확대하면 캔버스가 칸보다 커지므로 손가락(또는 스크롤)으로 밀어서 본다.
    safe center = 커졌을 때 위/왼쪽이 잘려 못 보게 되는 것을 막아준다 */
@@ -474,17 +478,19 @@ button { font-family: inherit; cursor: pointer; }
 .tab-panel { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
 
 /* Files 칸 */
-.file-search { padding: 12px 18px 0; }
+.file-search { position: relative; padding: 12px 18px 0; }
 .file-search input {
   width: 100%;
   height: 36px;
-  padding: 0 12px;
+  padding: 0 32px 0 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
+  color: var(--text);
 }
 .file-search input:focus { outline: 2px solid var(--accent); border-color: transparent; }
+.file-search .clear-btn { top: 15px; right: 22px; }
 
 .file-tools {
   display: flex;
