@@ -195,6 +195,7 @@ function newPane() {
     file: null, doc: null, page: null, loading: null,
     pageNum: 1, numPages: 1,
     zoom: 1, rot: 0, fitScale: 1,
+    crop: null,                  // 이 장에서 내용이 들어 있는 네모 (PDF 원래 좌표)
     task: null, token: 0
   };
 }
@@ -369,6 +370,67 @@ function showPlaceholder(i, html) {
   ph.innerHTML = html;
 }
 
+/* PDF 한 장에서 '실제로 그림·글씨가 있는 네모'를 찾는다.
+   차트 가장자리의 흰 여백을 잘라내고 화면을 꽉 채워 보여주기 위한 것.
+   작게 한 번 그려 보고 흰색이 아닌 점의 범위를 재는 방식이다.
+   돌려주는 값은 PDF 원래 좌표라서, 회전하거나 확대해도 그대로 쓸 수 있다 */
+async function detectContent(page) {
+  try {
+    const v1 = page.getViewport({ scale: 1 });
+    // 여백만 재면 되므로 크게 그릴 필요가 없다. 긴 변 900점 정도면 충분하다
+    const s = Math.min(1.2, 900 / Math.max(v1.width, v1.height));
+    const vp = page.getViewport({ scale: s });
+    const w = Math.max(1, Math.ceil(vp.width));
+    const h = Math.max(1, Math.ceil(vp.height));
+
+    const probe = document.createElement('canvas');
+    probe.width = w;
+    probe.height = h;
+    const ctx = probe.getContext('2d', { alpha: false, willReadFrequently: true });
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, w, h);
+    await page.render({ canvasContext: ctx, viewport: vp }).promise;
+
+    const px = ctx.getImageData(0, 0, w, h).data;
+    const rows = new Uint32Array(h);
+    const cols = new Uint32Array(w);
+    const DARK = 240;                 // 이보다 어두우면 내용이 있는 것으로 본다
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const i = (y * w + x) << 2;
+        if (px[i] < DARK || px[i + 1] < DARK || px[i + 2] < DARK) { rows[y]++; cols[x]++; }
+      }
+    }
+
+    // 점 한두 개짜리 얼룩(스캔 티끌)은 내용으로 치지 않는다
+    const MIN = 2;
+    let y0 = 0, y1 = h - 1, x0 = 0, x1 = w - 1;
+    while (y0 < h && rows[y0] < MIN) y0++;
+    while (y1 > y0 && rows[y1] < MIN) y1--;
+    while (x0 < w && cols[x0] < MIN) x0++;
+    while (x1 > x0 && cols[x1] < MIN) x1--;
+    if (y0 >= h || x0 >= w) return null;                       // 빈 장
+
+    const pad = 3;                    // 딱 붙여 자르면 잘린 것처럼 보여서 아주 조금 남긴다
+    x0 = Math.max(0, x0 - pad);  y0 = Math.max(0, y0 - pad);
+    x1 = Math.min(w - 1, x1 + pad);  y1 = Math.min(h - 1, y1 + pad);
+
+    const cw = x1 - x0 + 1, chh = y1 - y0 + 1;
+    if (cw > w * 0.97 && chh > h * 0.97) return null;          // 잘라낼 여백이 없다
+    if (cw < w * 0.15 || chh < h * 0.15) return null;          // 너무 조금 남으면 잘못 잰 것으로 본다
+
+    const a = vp.convertToPdfPoint(x0, y0);
+    const b = vp.convertToPdfPoint(x1 + 1, y1 + 1);
+    return {
+      x0: Math.min(a[0], b[0]), y0: Math.min(a[1], b[1]),
+      x1: Math.max(a[0], b[0]), y1: Math.max(a[1], b[1])
+    };
+  } catch (err) {
+    console.warn('여백을 재지 못했습니다:', err);
+    return null;                      // 못 재면 예전처럼 장 전체를 보여준다
+  }
+}
+
 /* 화면 맞춤 배율로 되돌아갈 때와 확대할 때 모두 이 함수로 다시 그린다 */
 async function drawPage(i) {
   const p = panes[i];
@@ -381,12 +443,26 @@ async function drawPage(i) {
   const canvas = canvasEl(i);
   const base = p.page.getViewport({ scale: 1, rotation: p.rot });
 
+  // 내용이 있는 네모만 잘라서 보여 준다. PDF 원래 좌표를 지금 회전 상태의 좌표로 옮긴다
+  let cropX = 0, cropY = 0, cropW = base.width, cropH = base.height;
+  if (p.crop) {
+    const c = p.crop;
+    const pts = [[c.x0, c.y0], [c.x1, c.y0], [c.x1, c.y1], [c.x0, c.y1]]
+      .map(([x, y]) => base.convertToViewportPoint(x, y));
+    const xs = pts.map(q => q[0]);
+    const ys = pts.map(q => q[1]);
+    cropX = Math.max(0, Math.min(...xs));
+    cropY = Math.max(0, Math.min(...ys));
+    cropW = Math.min(base.width  - cropX, Math.max(...xs) - cropX);
+    cropH = Math.min(base.height - cropY, Math.max(...ys) - cropY);
+  }
+
   const availW = Math.max(80, body.clientWidth  - 6);   // .viewer-body 안쪽 여백(3px씩)만큼 뺀다
   const availH = Math.max(80, body.clientHeight - 6);
-  p.fitScale = Math.min(availW / base.width, availH / base.height);
+  p.fitScale = Math.min(availW / cropW, availH / cropH);
 
-  const cssW = base.width  * p.fitScale * p.zoom;
-  const cssH = base.height * p.fitScale * p.zoom;
+  const cssW = cropW * p.fitScale * p.zoom;
+  const cssH = cropH * p.fitScale * p.zoom;
 
   // 화면 픽셀 밀도까지 반영해야 글자가 또렷하다
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -394,13 +470,13 @@ async function drawPage(i) {
 
   // 캔버스가 너무 크면 아이패드에서 아예 그려지지 않으므로 상한을 둔다
   const MAX_PX = 12e6;
-  if (base.width * scale * base.height * scale > MAX_PX) {
-    scale = Math.sqrt(MAX_PX / (base.width * base.height));
+  if (cropW * scale * cropH * scale > MAX_PX) {
+    scale = Math.sqrt(MAX_PX / (cropW * cropH));
   }
 
   const vp = p.page.getViewport({ scale, rotation: p.rot });
-  canvas.width  = Math.max(1, Math.floor(vp.width));
-  canvas.height = Math.max(1, Math.floor(vp.height));
+  canvas.width  = Math.max(1, Math.floor(cropW * scale));
+  canvas.height = Math.max(1, Math.floor(cropH * scale));
   canvas.style.width  = Math.round(cssW) + 'px';
   canvas.style.height = Math.round(cssH) + 'px';
   canvas.style.transform = '';
@@ -409,7 +485,12 @@ async function drawPage(i) {
   ctx.fillStyle = '#fff';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  p.task = p.page.render({ canvasContext: ctx, viewport: vp });
+  // 잘라낸 만큼 왼쪽·위로 밀어서 그리면 내용만 캔버스에 담긴다
+  p.task = p.page.render({
+    canvasContext: ctx,
+    viewport: vp,
+    transform: [1, 0, 0, 1, -cropX * scale, -cropY * scale]
+  });
   try {
     await p.task.promise;
   } catch (err) {
@@ -427,8 +508,15 @@ async function drawPage(i) {
 async function loadPage(i, num) {
   const p = panes[i];
   if (!p.doc) return;
+  const token = p.token;
   p.pageNum = Math.min(Math.max(1, num), p.numPages);
   p.page = await p.doc.getPage(p.pageNum);
+  if (token !== p.token) return;              // 여는 사이에 다른 차트로 바뀐 경우
+
+  // 여백 재기는 그리기 전에 끝내야 한다 (같은 장을 동시에 두 번 그리지 않도록)
+  p.crop = await detectContent(p.page);
+  if (token !== p.token) return;
+
   await drawPage(i);
 }
 
@@ -886,13 +974,22 @@ $('#airport-table').addEventListener('input', e => {
 });
 
 /* 설정 창 — Files 칸 (넣어둔 PDF 전체 관리) */
+
+/* 검색창에 적은 말로 걸러낸 목록. 여기서는 파일 이름으로도 찾을 수 있게 한다 */
+function filteredFiles() {
+  const q = $('#file-search').value.trim().toLowerCase();
+  if (!q) return CHARTS;
+  return CHARTS.filter(c => matches(c, q) || c.file.toLowerCase().includes(q));
+}
+
 function renderFileTable() {
   // 지워진 파일이 선택 상태로 남아 있지 않게 정리한다
   selectedFiles.forEach(f => { if (!CHARTS.some(c => c.file === f)) selectedFiles.delete(f); });
 
+  const list = filteredFiles();
   const box = $('#file-table');
-  box.innerHTML = CHARTS.length
-    ? CHARTS.map(c => `
+  box.innerHTML = list.length
+    ? list.map(c => `
         <label class="file-row">
           <input type="checkbox" data-file="${esc(c.file)}"${selectedFiles.has(c.file) ? ' checked' : ''}>
           <span class="badge badge-${c.type}">${esc(c.type === 'ETC' ? (c.rawType || 'ETC') : c.type)}</span>
@@ -902,25 +999,32 @@ function renderFileTable() {
           </span>
           <span class="file-size">${fmtSize(c.size || 0)}</span>
         </label>`).join('')
-    : '<p class="empty-note">아직 넣어둔 차트가 없습니다.<br>오른쪽 위 <b>Upload</b> 를 눌러 차트를 넣어주세요.</p>';
+    : (CHARTS.length
+        ? '<p class="empty-note">찾는 차트가 없습니다. 검색어를 확인해보세요.</p>'
+        : '<p class="empty-note">아직 넣어둔 차트가 없습니다.<br>오른쪽 위 <b>Upload</b> 를 눌러 차트를 넣어주세요.</p>');
 
   updateFileTools();
 }
 
 function updateFileTools() {
-  const total = CHARTS.length;
-  const bytes = CHARTS.reduce((sum, c) => sum + (c.size || 0), 0);
+  const list = filteredFiles();
+  const bytes = list.reduce((sum, c) => sum + (c.size || 0), 0);
   const picked = selectedFiles.size;
+  const searching = list.length !== CHARTS.length;
 
-  $('#file-sum').textContent = total ? `전체 ${total}개 · ${fmtSize(bytes)}` : '';
+  $('#file-sum').textContent = CHARTS.length
+    ? (searching ? `찾은 ${list.length}개 · ${fmtSize(bytes)}  (전체 ${CHARTS.length}개)`
+                 : `전체 ${CHARTS.length}개 · ${fmtSize(bytes)}`)
+    : '';
 
   const del = $('#btn-file-del');
   del.disabled = !picked;
   del.textContent = picked ? `선택 ${picked}개 삭제` : '선택 삭제';
 
+  // 전체 선택은 '지금 보이는 것' 기준이다 (검색으로 걸러 놓고 그것만 지울 수 있도록)
   const all = $('#file-all');
-  all.checked = total > 0 && picked === total;
-  all.indeterminate = picked > 0 && picked < total;
+  all.checked = list.length > 0 && picked === list.length;
+  all.indeterminate = picked > 0 && picked < list.length;
 }
 
 $('#file-table').addEventListener('change', e => {
@@ -933,9 +1037,16 @@ $('#file-table').addEventListener('change', e => {
 
 $('#file-all').addEventListener('change', e => {
   selectedFiles.clear();
-  if (e.target.checked) CHARTS.forEach(c => selectedFiles.add(c.file));
+  if (e.target.checked) filteredFiles().forEach(c => selectedFiles.add(c.file));
   $$('#file-table [data-file]').forEach(box => { box.checked = e.target.checked; });
   updateFileTools();
+});
+
+/* 검색어를 바꾸면 골라 둔 것을 푼다.
+   안 보이는 차트가 선택된 채로 남아 있다가 같이 지워지는 사고를 막기 위함이다 */
+$('#file-search').addEventListener('input', () => {
+  selectedFiles.clear();
+  renderFileTable();
 });
 
 $('#btn-file-del').addEventListener('click', () => removeCharts([...selectedFiles]));
@@ -947,6 +1058,8 @@ function showTab(name) {
 }
 
 function openSettings(tab = 'airport') {
+  $('#file-search').value = '';        // 지난번 검색어가 남아 차트가 안 보이는 일이 없게
+  selectedFiles.clear();
   renderAirportTable();
   renderFileTable();
   showTab(tab);
