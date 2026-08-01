@@ -195,7 +195,7 @@ button { font-family: inherit; cursor: pointer; }
   padding: 11px 12px;
   border: 0;
   border-bottom: 1px solid var(--line);
-  background: #f6f8fa;
+  background: #e3ebf4;      /* 연한 네이비 (밝은 회색이었던 것을 상단 바 색과 어울리게 바꿈) */
   color: var(--text);
   font-size: 15px;
   font-weight: 700;
@@ -363,7 +363,7 @@ button { font-family: inherit; cursor: pointer; }
   background: #f6f8fa;
 }
 .viewer-title {
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
