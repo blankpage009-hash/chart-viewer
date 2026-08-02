@@ -404,7 +404,9 @@ input::placeholder { color: var(--text-dim); }
   border: 0; border-radius: 6px;
   background: transparent;
   color: var(--star-off);
-  font-size: 17px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .star-btn:hover { background: var(--btn-hover); }
 .star-btn.is-on { color: var(--star); }
@@ -647,7 +649,9 @@ input::placeholder { color: var(--text-dim); }
   border: 0; border-radius: 6px;
   background: transparent;
   color: var(--star-off);
-  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .apt-row .apt-fav-toggle:hover { background: var(--btn-hover); }
 .apt-row .apt-fav-toggle.is-on { color: var(--star); }
