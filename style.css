@@ -128,9 +128,9 @@ button { font-family: inherit; cursor: pointer; }
 .icon-btn svg { display: block; }
 .icon-btn:hover  { background: rgba(255,255,255,.22); }
 .icon-btn.is-on  { background: var(--accent); }
-.icon-btn.small  { min-width: 34px; height: 34px; font-size: 17px;
+.icon-btn.small  { min-width: 30px; height: 30px; font-size: 15px;
                    background: transparent; color: var(--text-dim); }
-.icon-btn.small svg { width: 16px; height: 16px; }
+.icon-btn.small svg { width: 14px; height: 14px; }
 .icon-btn.small:hover { background: var(--btn-hover); color: var(--text); }
 .icon-btn.small.is-fav { color: var(--star); }
 
@@ -170,25 +170,28 @@ input::placeholder { color: var(--text-dim); }
 }
 .clear-btn:hover { background: var(--btn-hover); }
 
-/* 즐겨찾기한 공항 칩 (검색창 오른쪽). 8개 정도는 한 번에 보이고, 더 있으면 손가락으로 옆으로 밀어서 본다.
-   scroll-snap으로 항상 칩의 왼쪽 끝에서 멈추게 해서, 스크롤 위치에 따라 마지막 칩이 반 토막으로
-   잘려 보이는 일이 없게 한다 (2026-08-02: 8번째 칩이 살짝 잘려 보인다는 지적으로 추가) */
+/* 즐겨찾기한 공항 칩 (검색창 오른쪽). 정확히 8개가 잘리는 부분 없이 보이고, 더 있으면
+   손가락으로 옆으로 밀어서 본다.
+   칩 폭을 고정값(64px)으로 못박아 둔다 — 글자 폭에 따라 칩마다 크기가 들쭉날쭉하면(예전 방식)
+   그릇 너비를 "칩 8개만큼"으로 딱 맞게 계산할 수가 없어서, 9번째가 살짝 삐져나와 보였다.
+   그릇 최대 폭 547px = 칩 8개(64px×8) + 칩 사이 간격 7개(5px×7). 이 계산이 어긋나면 다시 삐져나온다
+   (2026-08-02: 8번째·9번째 칩이 잘려 보인다는 지적 두 차례로 고정폭 방식으로 바꿈) */
 .fav-airports {
   display: flex;
   align-items: center;
   gap: 5px;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
-  max-width: 500px;
+  max-width: 547px;
   scroll-snap-type: x proximity;
-  padding-right: 2px;   /* 마지막 칩과 그릇 오른쪽 끝 사이에 여유를 조금 둔다 */
 }
 .fav-airports::-webkit-scrollbar { display: none; }
 .fav-apt-chip {
   scroll-snap-align: start;
-  flex: 0 0 auto;
+  flex: 0 0 64px;
+  width: 64px;
   height: 34px;
-  padding: 0 11px;
+  padding: 0;
   border: 0;
   border-radius: 8px;
   background: rgba(255,255,255,.12);
@@ -197,6 +200,9 @@ input::placeholder { color: var(--text-dim); }
   font-weight: 700;
   letter-spacing: .3px;
   white-space: nowrap;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .fav-apt-chip:hover { background: rgba(255,255,255,.22); }
 
@@ -414,14 +420,15 @@ input::placeholder { color: var(--text-dim); }
 .viewer-bar {
   display: flex;
   align-items: center;
-  gap: 4px;
-  /* 차트가 조금이라도 더 커 보이도록 이 줄의 위아래 여백을 줄였다 (2026-08-02) */
-  padding: 3px 6px 3px 12px;
+  gap: 3px;
+  /* 차트가 조금이라도 더 커 보이도록 이 줄(제목 + － 100% ＋ 회전·전체보기·즐겨찾기·× )의
+     위아래 여백을 줄였다. 48px → 41px → 34px (2026-08-02, 두 차례 요청으로 더 줄임) */
+  padding: 2px 5px 2px 10px;
   border-bottom: 1px solid var(--line);
   background: var(--bar-bg);
 }
 .viewer-title {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
@@ -430,11 +437,11 @@ input::placeholder { color: var(--text-dim); }
 .spacer { flex: 1 1 auto; }
 
 .page-nav { display: flex; align-items: center; gap: 2px; }
-.page-label { font-size: 12px; color: var(--text-dim); min-width: 44px; text-align: center; }
-.zoom-label { min-width: 44px; font-weight: 600; }
-/* .icon-btn.small 의 font-size(17px)보다 "100%" 글자를 따로 조금 더 줄인다.
+.page-label { font-size: 11px; color: var(--text-dim); min-width: 40px; text-align: center; }
+.zoom-label { min-width: 40px; font-weight: 600; }
+/* .icon-btn.small 의 font-size(15px)보다 "100%" 글자를 따로 조금 더 줄인다.
    세 클래스짜리 선택자로 우선순위를 높여야 이긴다 */
-.icon-btn.small.zoom-label { font-size: 15px; }
+.icon-btn.small.zoom-label { font-size: 13px; }
 
 /* 확대하면 캔버스가 칸보다 커지므로 손가락(또는 스크롤)으로 밀어서 본다.
    safe center = 커졌을 때 위/왼쪽이 잘려 못 보게 되는 것을 막아준다 */
