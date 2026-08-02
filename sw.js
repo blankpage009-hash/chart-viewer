@@ -4,7 +4,8 @@
 
 /* ★★ 앱을 고쳐서 다시 올릴 때는 아래 번호를 1 올릴 것 (ncv-v1 → ncv-v2).
        안 올리면 아이패드가 예전 화면을 계속 쓴다. ★★ */
-const CACHE = 'ncv-v23';  // v23: 즐겨찾기 아이콘을 별표에서 핀 모양으로 (2026-08-02)
+const CACHE = 'ncv-v24';  // v24: Result→Charts, 아이패드 세로 검색창·즐겨찾기 칩 크기 조정,
+// 즐겨찾기 아이콘을 Pin.png 이미지로, 설정 줄 텍스트 아래쪽 정렬 (2026-08-02)
 
 const APP_FILES = [
   './',
@@ -14,6 +15,7 @@ const APP_FILES = [
   './manifest.webmanifest',
   './icon.png',
   './jeppesen_icon.png',
+  './Pin.png',
   './pdfjs/pdf.min.mjs',
   './pdfjs/pdf.worker.min.mjs'
 ];

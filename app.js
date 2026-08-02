@@ -236,14 +236,11 @@ function matches(chart, q) {
 
 
 /* ── 6. 목록 그리기 ───────────────────────────────────────────── */
-/* 즐겨찾기 아이콘 = 핀. 채워지면 즐겨찾기된 것, 테두리만 있으면 아닌 것
-   (2026-08-02, 별표 → 핀 모양으로 바꿔 달라는 요청) */
-const PIN_D = 'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5' +
-              'c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z';
-function pinIcon(filled) {
-  return filled
-    ? `<svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="${PIN_D}"/></svg>`
-    : `<svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.7" d="${PIN_D}"/></svg>`;
+/* 즐겨찾기(Pinboards) 아이콘 = 사용자가 준 Pin.png. CSS mask로 씌워서 색만 currentColor를
+   따라가게 한다 — 즐겨찾기 여부에 따른 색은 .is-on/.is-fav 클래스가 그대로 정한다
+   (2026-08-02, 별표 → 핀 모양 SVG → 실제 이미지(Pin.png) 순서로 바꿈) */
+function pinIcon() {
+  return '<span class="pin-icon" aria-hidden="true"></span>';
 }
 
 function chartRow(chart) {
@@ -262,7 +259,7 @@ function chartRow(chart) {
       </span>
     </button>
     <button class="star-btn${isFav ? ' is-on' : ''}" data-star="${esc(chart.file)}"
-            title="즐겨찾기">${pinIcon(isFav)}</button>`;
+            title="즐겨찾기">${pinIcon()}</button>`;
   return row;
 }
 
@@ -375,7 +372,7 @@ function renderAirportList() {
 }
 
 /* 공항을 골랐을 때(Airport 탭이든 위쪽 즐겨찾기 칩이든) 공통으로 하는 일:
-   그 공항으로 검색하고, Airport 탭은 닫고 Result 탭을 편다 */
+   그 공항으로 검색하고, Airport 탭은 닫고 Charts 탭을 편다 */
 function jumpToAirport(icao) {
   $('#search').value = icao;
   state.query = icao;
@@ -419,7 +416,7 @@ function updateBar(i) {
 
   const favBtn = view.querySelector('[data-act="fav"]');
   favBtn.classList.toggle('is-fav', !!isFav);
-  favBtn.innerHTML = pinIcon(isFav);
+  favBtn.innerHTML = pinIcon();
 
   const fsBtn = view.querySelector('[data-act="fullscreen"]');
   fsBtn.classList.toggle('is-on', state.fullscreen);
@@ -1053,7 +1050,7 @@ function renderAirportTable() {
     const isFav = favAirports.includes(icao);
     row.innerHTML = `
       <button class="apt-fav-toggle${isFav ? ' is-on' : ''}" data-apt-fav="${esc(icao)}"
-              title="공항 즐겨찾기">${pinIcon(isFav)}</button>
+              title="공항 즐겨찾기">${pinIcon()}</button>
       <span class="code">${esc(icao)}</span>
       <input data-apt="${esc(icao)}" data-field="name"    placeholder="공항 이름 (예: Gimpo Intl)">
       <input data-apt="${esc(icao)}" data-field="country" placeholder="국가 (예: Korea)">`;
@@ -1071,7 +1068,7 @@ $('#airport-table').addEventListener('click', e => {
   if (at >= 0) favAirports.splice(at, 1); else favAirports.push(icao);
   save(KEY_APT_FAV, favAirports);
   favBtn.classList.toggle('is-on');
-  favBtn.innerHTML = pinIcon(favAirports.includes(icao));
+  favBtn.innerHTML = pinIcon();
   renderFavAirportChips();
 });
 

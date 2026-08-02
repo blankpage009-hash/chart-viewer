@@ -411,6 +411,20 @@ input::placeholder { color: var(--text-dim); }
 .star-btn:hover { background: var(--btn-hover); }
 .star-btn.is-on { color: var(--star); }
 
+/* 즐겨찾기(Pinboards) 아이콘 = 사용자가 준 Pin.png(핀 실루엣, 투명 배경).
+   색 자체를 이미지 파일에 넣어두지 않고 CSS mask로 오려서 currentColor를 입힌다 —
+   그래야 즐겨찾기 여부(회색/금색)·다크 테마에 따라 색이 자동으로 맞는다
+   (2026-08-02, 손으로 그린 핀 모양 SVG를 실제 이미지로 교체) */
+.pin-icon {
+  display: inline-block;
+  flex: 0 0 auto;
+  width: 15px;
+  height: 15px;
+  background-color: currentColor;
+  -webkit-mask: url('Pin.png') center / contain no-repeat;
+  mask: url('Pin.png') center / contain no-repeat;
+}
+
 .store-info {
   padding: 10px 12px 6px;
   color: var(--text-dim);
@@ -424,6 +438,10 @@ input::placeholder { color: var(--text-dim); }
    접었다 펴는 기능은 없다 (2026-08-02, 요청으로 아이콘+글자·고정 배치로 바꿈) */
 .sidebar-foot {
   flex: 0 0 auto;
+  /* 안전 영역(홈 인디케이터 자리)만큼 아래쪽 여백이 커지는데, 세로 가운데 정렬(.section-head 기본값)로
+     두면 아이콘·글자가 그 여백 위쪽에 붕 떠서 "밑에 빈 공간이 더 있다"고 보인다.
+     아래쪽 끝에 붙이면 그 여백을 실제로 활용하는 모양이 된다 (2026-08-02 요청) */
+  align-items: flex-end;
   gap: 8px;
   border-top: 1px solid var(--line);
   border-bottom: 0;
@@ -747,6 +765,13 @@ body.is-fullscreen .viewer:not(.is-active) { display: none; }
      줄였는데, 설정 버튼이 사이드바 맨 아래로 옮겨가면서 더 줄일 이유가 없어졌다.
      (2026-08-02, 아이패드 세로·아이폰에서 로고가 작아진다는 지적으로 고정함) */
   .text-btn { padding: 0 9px; font-size: 13px; }
+
+  /* 아이패드 세로 화면 등 (검색창·즐겨찾기 칩이 아직 한 줄에 같이 있는 폭).
+     검색창을 조금 더 키우고, 즐겨찾기 공항 칩은 기본 9개 대신 5개까지만 보이게 줄인다
+     (칩 5개 = 58px×5 + 간격 5px×4 = 310px). 더 좁아져 줄바꿈되는 휴대폰 폭(620px 아래)에서는
+     아래 @media (max-width: 620px) 쪽 값이 이 값을 덮어쓴다 (2026-08-02 요청) */
+  .search-wrap { flex: 0 1 230px; min-width: 160px; }
+  .fav-airports { max-width: 310px; }
 
   /* 좁은 화면에서는 목록이 본문을 밀지 않고 위에 겹쳐 뜨게 */
   .sidebar {
