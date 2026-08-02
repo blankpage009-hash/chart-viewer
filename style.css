@@ -170,17 +170,22 @@ input::placeholder { color: var(--text-dim); }
 }
 .clear-btn:hover { background: var(--btn-hover); }
 
-/* 즐겨찾기한 공항 칩 (검색창 오른쪽). 8개 정도는 한 번에 보이고, 더 있으면 손가락으로 옆으로 밀어서 본다 */
+/* 즐겨찾기한 공항 칩 (검색창 오른쪽). 8개 정도는 한 번에 보이고, 더 있으면 손가락으로 옆으로 밀어서 본다.
+   scroll-snap으로 항상 칩의 왼쪽 끝에서 멈추게 해서, 스크롤 위치에 따라 마지막 칩이 반 토막으로
+   잘려 보이는 일이 없게 한다 (2026-08-02: 8번째 칩이 살짝 잘려 보인다는 지적으로 추가) */
 .fav-airports {
   display: flex;
   align-items: center;
   gap: 5px;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
-  max-width: 480px;
+  max-width: 500px;
+  scroll-snap-type: x proximity;
+  padding-right: 2px;   /* 마지막 칩과 그릇 오른쪽 끝 사이에 여유를 조금 둔다 */
 }
 .fav-airports::-webkit-scrollbar { display: none; }
 .fav-apt-chip {
+  scroll-snap-align: start;
   flex: 0 0 auto;
   height: 34px;
   padding: 0 11px;
@@ -225,9 +230,11 @@ input::placeholder { color: var(--text-dim); }
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   transition: margin-left .18s ease;
-  /* 오른쪽 차트 칸의 아래쪽 여백과 맞춰서, 두 영역의 바닥선이 같은 높이에서 끝나게 한다.
-     화면을 최대한 채우려고 여백은 없애고, 홈 인디케이터(가로 막대) 자리만 남긴다 */
-  margin-bottom: env(safe-area-inset-bottom);
+  /* 홈 인디케이터(가로 막대) 자리는 margin이 아니라 padding으로 확보한다.
+     margin으로 비워두면 그 틈으로 배경색(--bg)이 비쳐서, 특히 다크 테마에서 목록 패널(--panel)과
+     색이 달라 아래쪽에 딴 색 띠가 있는 것처럼 보인다. padding이면 그 틈도 목록 자신의 배경색으로
+     채워지므로 화면 끝까지 꽉 차 보인다 (2026-08-02, "아래 여백이 넓다" 지적으로 바꿈) */
+  padding-bottom: env(safe-area-inset-bottom);
 }
 .layout.sidebar-hidden .sidebar { margin-left: calc(var(--sidebar-w) * -1); }
 
@@ -381,8 +388,11 @@ input::placeholder { color: var(--text-dim); }
   min-width: 0;
   display: flex;
   gap: 5px;
-  /* 차트를 최대한 크게 보려고 테두리 여백은 최소로 하고, 아래는 홈 인디케이터(가로 막대) 자리만 남긴다 */
-  padding: 4px calc(4px + env(safe-area-inset-right)) env(safe-area-inset-bottom) 4px;
+  /* 차트를 최대한 크게 보려고 네 방향 다 똑같이 최소 여백만 둔다.
+     홈 인디케이터 자리는 여기서 비워두지 않고, 차트 칸(.viewer) 안쪽 맨 아래에 그 칸 자신의
+     색으로 채워 넣는다 (아래쪽 참고) — 그래야 화면 바탕색이 다른 다크 테마에서도 틈으로
+     딴 색이 비치지 않고 칸이 화면 끝까지 꽉 차 보인다 (2026-08-02, "아래 여백이 넓다" 지적으로 바꿈) */
+  padding: 4px calc(4px + env(safe-area-inset-right)) 4px 4px;
 }
 
 .viewer {
@@ -394,6 +404,9 @@ input::placeholder { color: var(--text-dim); }
   border-radius: 10px;
   background: var(--panel);
   overflow: hidden;
+  /* 홈 인디케이터 자리를 칸 안쪽 맨 아래에 이 칸 배경색(panel)으로 확보한다.
+     .viewer-body 안쪽 padding(3px)을 건드리면 drawPage의 "-6" 계산과 어긋나므로 손대지 않는다 */
+  padding-bottom: env(safe-area-inset-bottom);
 }
 /* 2분할일 때만 어느 쪽에 차트가 열릴지 테두리로 표시 */
 .viewers.split .viewer.is-active { border-color: var(--accent); }
@@ -659,7 +672,9 @@ body.is-fullscreen .viewers {
   padding: env(safe-area-inset-top) env(safe-area-inset-right)
            env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
-body.is-fullscreen .viewer { border-radius: 0; border-width: 0; }
+/* 전체 화면 보기에서는 .viewers 쪽에서 이미 안전 영역을 확보하므로, 칸 자신의 padding-bottom은
+   끈다 (안 끄면 안전 영역이 두 번 겹쳐 아래가 필요 이상으로 넓어진다) */
+body.is-fullscreen .viewer { border-radius: 0; border-width: 0; padding-bottom: 0; }
 body.is-fullscreen .viewer:not(.is-active) { display: none; }
 
 /* ── 화면이 좁을 때 (휴대폰 · 창을 많이 줄였을 때) ── */
