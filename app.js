@@ -401,9 +401,11 @@ function updateBar(i) {
   view.classList.toggle('is-active', i === state.activePane);
   view.classList.toggle('has-chart', !!p.file);
 
-  view.querySelector('.viewer-title').textContent = chart
-    ? `${chart.icao}  ${chart.no}  ${chart.title}`
-    : '차트를 선택하세요';
+  // 파일 이름 맨 앞에 종류(SID/STAR/APP/TAXI/etc) 배지를 붙여, 지금 보는 차트가 어떤 종류인지 바로 보이게 한다
+  view.querySelector('.viewer-title').innerHTML = chart
+    ? `<span class="badge badge-${chart.type}">${esc(chart.type === 'ETC' ? (chart.rawType || 'ETC') : chart.type)}</span>` +
+      `<span class="viewer-title-text">${esc(chart.icao)}  ${esc(chart.no)}  ${esc(chart.title)}</span>`
+    : '<span class="viewer-title-text">차트를 선택하세요</span>';
 
   const favBtn = view.querySelector('[data-act="fav"]');
   favBtn.classList.toggle('is-fav', !!isFav);
@@ -628,6 +630,51 @@ function closePane(i, opts = {}) {
 function renderRowStates() {
   $$('.chart-row').forEach(row =>
     row.classList.toggle('is-open', panes.some(p => p.file === row.dataset.file)));
+}
+
+/* 같은 공항의 차트 목록(전체 종류, CHARTS의 정렬 순서 그대로) 안에서 이전·다음으로 넘어간다.
+   dir 은 -1(이전) 또는 1(다음) */
+function stepChart(i, dir) {
+  const chart = CHARTS.find(c => c.file === panes[i].file);
+  if (!chart) return;
+  const siblings = CHARTS.filter(c => c.icao === chart.icao);
+  const idx = siblings.findIndex(c => c.file === chart.file);
+  const next = siblings[idx + dir];
+  if (!next) return;               // 맨 처음·맨 끝이면 그냥 둔다
+
+  if (state.split && state.activePane !== i) {
+    state.activePane = i;
+    panes.forEach((_, k) => updateBar(k));
+  }
+  openChart(next.file);
+}
+
+/* 차트가 화면 맞춤(100%) 배율일 때는 가로로 넘칠 내용이 없어 좌우 스와이프가 그냥 버려지므로,
+   그 손짓을 이전·다음 차트 넘기기로 대신 쓴다. 확대돼 있으면(스크롤이 필요하면) 평소처럼 스와이프로
+   화면을 옮긴다 (2026-08-02 요청) */
+function attachChartSwipe(i) {
+  const body = bodyEl(i);
+  const MIN_X = 50;      // 이만큼은 옆으로 그어야 넘긴다
+  let sx = 0, sy = 0, watching = false;
+
+  body.addEventListener('touchstart', e => {
+    const p = panes[i];
+    watching = e.touches.length === 1 && !!p.page && p.zoom === 1;
+    if (!watching) return;
+    sx = e.touches[0].clientX;
+    sy = e.touches[0].clientY;
+  }, { passive: true });
+
+  body.addEventListener('touchend', e => {
+    if (!watching) return;
+    watching = false;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - sx;
+    const dy = t.clientY - sy;
+    // 위아래로 그은 것은 무시한다
+    if (Math.abs(dx) < MIN_X || Math.abs(dx) < Math.abs(dy) * 1.2) return;
+    stepChart(i, dx < 0 ? 1 : -1);
+  }, { passive: true });
 }
 
 /* ── 8. 확대 · 축소 ───────────────────────────────────────────── */
@@ -1217,7 +1264,7 @@ navigator.storage?.persist?.()
 /* 머리말 코드가 막혀 있었을 경우를 대비해 한 번 더 맞춰 준다 */
 applyTheme(theme);
 
-[0, 1].forEach(i => { attachPinch(i); attachPan(i); });
+[0, 1].forEach(i => { attachPinch(i); attachPan(i); attachChartSwipe(i); });
 attachSidebarSwipe();
 refreshLibrary().catch(err => {
   console.error(err);
