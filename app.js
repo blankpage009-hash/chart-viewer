@@ -236,11 +236,15 @@ function matches(chart, q) {
 
 
 /* ── 6. 목록 그리기 ───────────────────────────────────────────── */
-/* 즐겨찾기(Pinboards) 아이콘 = 사용자가 준 Pin.png. CSS mask로 씌워서 색만 currentColor를
-   따라가게 한다 — 즐겨찾기 여부에 따른 색은 .is-on/.is-fav 클래스가 그대로 정한다
-   (2026-08-02, 별표 → 핀 모양 SVG → 실제 이미지(Pin.png) 순서로 바꿈) */
+/* 즐겨찾기(Pinboards) 아이콘 = 비스듬히 꽂힌 압정. 똑바로 선 압정 그림을 45도 돌려서 쓴다
+   (돌리면 네 귀퉁이가 그림틀 밖으로 나가므로 0.88배로 줄여 안에 들어오게 맞췄다).
+   즐겨찾기 여부는 모양이 아니라 색(.is-on/.is-fav → 회색/금색)으로 구분한다
+   (2026-08-02, 별표 → Pin.png → 직접 그린 압정 순서로 바뀜) */
 function pinIcon() {
-  return '<span class="pin-icon" aria-hidden="true"></span>';
+  return `<svg class="pin-icon" width="15" height="15" viewBox="0 0 24 24" aria-hidden="true">
+      <g transform="rotate(45 12 12)"><g transform="translate(12 12) scale(.88) translate(-12 -12)">
+        <path fill="currentColor" d="M16 9V4h1c.55 0 1-.45 1-1s-.45-1-1-1H7c-.55 0-1 .45-1 1s.45 1 1 1h1v5c0 1.66-1.34 3-3 3v2h5.97l1.03 9 1.03-9H19v-2c-1.66 0-3-1.34-3-3z"/>
+      </g></g></svg>`;
 }
 
 function chartRow(chart) {
