@@ -62,11 +62,6 @@
                 fill="none" stroke="currentColor" stroke-width="1.6"/>
         </svg>
       </button>
-      <button id="btn-settings" class="icon-btn" title="설정">
-        <svg width="21" height="21" viewBox="0 0 24 24" aria-hidden="true">
-          <path fill="currentColor" d="M19.14 12.94c.04-.31.06-.62.06-.94s-.02-.63-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96a7.03 7.03 0 0 0-1.62-.94l-.36-2.54a.48.48 0 0 0-.48-.41h-3.84a.48.48 0 0 0-.48.41l-.36 2.54c-.59.24-1.13.56-1.62.94l-2.39-.96a.48.48 0 0 0-.59.22L2.72 8.87a.48.48 0 0 0 .12.61l2.03 1.58c-.05.31-.09.63-.09.94s.02.63.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.25.41.48.41h3.84c.24 0 .44-.17.48-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 0 0-.12-.61l-2.01-1.58zM12 15.6A3.6 3.6 0 1 1 15.6 12 3.6 3.6 0 0 1 12 15.6z"/>
-        </svg>
-      </button>
     </div>
   </header>
 
@@ -84,6 +79,13 @@
       </section>
 
       <section class="list-section">
+        <button class="section-head" data-toggle="airport-body">
+          <span class="caret">▾</span> Airport <span class="count" id="airport-count">0</span>
+        </button>
+        <div class="section-body" id="airport-body"></div>
+      </section>
+
+      <section class="list-section">
         <button class="section-head" data-toggle="result-body">
           <span class="caret">▾</span> Result <span class="count" id="result-count">0</span>
         </button>
@@ -91,6 +93,14 @@
       </section>
 
       <footer class="store-info" id="store-info"></footer>
+
+      <!-- 목록을 아무리 내려도 항상 사이드바 맨 아래 붙어 있는다 (Airport·Result 같은 드롭다운 머리줄과 같은 음영) -->
+      <button id="btn-settings" class="section-head sidebar-foot" title="설정">
+        <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+          <path fill="currentColor" d="M19.14 12.94c.04-.31.06-.62.06-.94s-.02-.63-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96a7.03 7.03 0 0 0-1.62-.94l-.36-2.54a.48.48 0 0 0-.48-.41h-3.84a.48.48 0 0 0-.48.41l-.36 2.54c-.59.24-1.13.56-1.62.94l-2.39-.96a.48.48 0 0 0-.59.22L2.72 8.87a.48.48 0 0 0 .12.61l2.03 1.58c-.05.31-.09.63-.09.94s.02.63.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.25.41.48.41h3.84c.24 0 .44-.17.48-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 0 0-.12-.61l-2.01-1.58zM12 15.6A3.6 3.6 0 1 1 15.6 12 3.6 3.6 0 0 1 12 15.6z"/>
+        </svg>
+        Setting
+      </button>
     </aside>
 
     <div class="sidebar-scrim" id="sidebar-scrim"></div>

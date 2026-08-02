@@ -170,35 +170,41 @@ input::placeholder { color: var(--text-dim); }
 }
 .clear-btn:hover { background: var(--btn-hover); }
 
-/* 즐겨찾기한 공항 칩 (검색창 오른쪽). 정확히 8개가 잘리는 부분 없이 보이고, 더 있으면
+/* 즐겨찾기한 공항 칩 (검색창 오른쪽). 정확히 9개가 잘리는 부분 없이 보이고, 더 있으면
    손가락으로 옆으로 밀어서 본다.
-   칩 폭을 고정값(64px)으로 못박아 둔다 — 글자 폭에 따라 칩마다 크기가 들쭉날쭉하면(예전 방식)
-   그릇 너비를 "칩 8개만큼"으로 딱 맞게 계산할 수가 없어서, 9번째가 살짝 삐져나와 보였다.
-   그릇 최대 폭 547px = 칩 8개(64px×8) + 칩 사이 간격 7개(5px×7). 이 계산이 어긋나면 다시 삐져나온다
-   (2026-08-02: 8번째·9번째 칩이 잘려 보인다는 지적 두 차례로 고정폭 방식으로 바꿈) */
+   칩 폭을 고정값(58px)으로 못박아 둔다 — 글자 폭에 따라 칩마다 크기가 들쭉날쭉하면(예전 방식)
+   그릇 너비를 "칩 N개만큼"으로 딱 맞게 계산할 수가 없어서, 마지막 칩이 살짝 삐져나와 보였다.
+   그릇 최대 폭 562px = 칩 9개(58px×9) + 칩 사이 간격 8개(5px×8). 이 계산이 어긋나면 다시 삐져나온다
+   (2026-08-02: 칩을 검색창보다 낮게·아래쪽 라인에 맞춰 줄이면서 8개→9개로 늘림.
+   칩 개수를 바꾸거나 칩 폭·간격 값을 바꾸면 이 562px 계산도 같이 고칠 것) */
 .fav-airports {
   display: flex;
   align-items: center;
   gap: 5px;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
-  max-width: 547px;
+  max-width: 562px;
   scroll-snap-type: x proximity;
+  /* topbar 는 모든 칸을 세로 가운데(align-items: center)로 맞추므로, 칩(29px)과 검색창(34px)의
+     세로 중심은 이미 같다. 다만 높이가 달라 칩의 아래쪽 선이 검색창보다 2.5px(=(34-29)/2) 위에
+     생기므로, 그만큼 아래로 밀어 두 아래쪽 선을 맞춘다 (2026-08-02, 아래쪽 라인 정렬 요청) */
+  position: relative;
+  top: 2.5px;
 }
 .fav-airports::-webkit-scrollbar { display: none; }
 .fav-apt-chip {
   scroll-snap-align: start;
-  flex: 0 0 64px;
-  width: 64px;
-  height: 34px;
+  flex: 0 0 58px;
+  width: 58px;
+  height: 29px;            /* 검색창(34px)보다 조금 낮게 */
   padding: 0;
   border: 0;
-  border-radius: 8px;
+  border-radius: 7px;
   background: rgba(255,255,255,.12);
   color: #fff;
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 700;
-  letter-spacing: .3px;
+  letter-spacing: .2px;
   white-space: nowrap;
   text-align: center;
   overflow: hidden;
@@ -231,6 +237,8 @@ input::placeholder { color: var(--text-dim); }
 .sidebar {
   width: var(--sidebar-w);
   flex: 0 0 var(--sidebar-w);
+  display: flex;
+  flex-direction: column;
   background: var(--panel);
   border-right: 1px solid var(--line);
   overflow-y: auto;
@@ -269,6 +277,22 @@ input::placeholder { color: var(--text-dim); }
   font-size: 11px;
 }
 .section-body.collapsed { display: none; }
+
+/* Airport 탭 — 들어가 있는 공항 전체 목록. 누르면 그 공항으로 검색해 Result를 보여준다 */
+.airport-row {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  width: 100%;
+  min-height: 40px;
+  padding: 9px 12px;
+  border: 0;
+  border-top: 1px solid var(--row-line);
+  background: transparent;
+  text-align: left;
+  color: inherit;
+}
+.airport-row:hover { background: var(--row-hover); }
 
 .empty-note {
   margin: 0;
@@ -380,13 +404,27 @@ input::placeholder { color: var(--text-dim); }
 .star-btn:hover { background: var(--btn-hover); }
 .star-btn.is-on { color: var(--star); }
 
-/* 왼쪽 목록 맨 아래 보관 현황 */
 .store-info {
-  padding: 10px 12px 16px;
+  padding: 10px 12px 6px;
   color: var(--text-dim);
   font-size: 11.5px;
   text-align: center;
 }
+
+/* 설정(톱니) 줄 — 상단 바에서 옮겨와 사이드바 맨 아래 붙박이로 둔다.
+   margin-top: auto 로 내용이 짧을 때도 맨 아래까지 밀어내고, position: sticky 로 목록을
+   내려도 항상 보이게 한다. Airport·Result 같은 드롭다운 머리줄(.section-head)과 같은 음영을
+   그대로 쓰되, 접었다 펴는 기능은 없다 (2026-08-02, 요청으로 아이콘+글자·고정 배치로 바꿈) */
+.sidebar-foot {
+  margin-top: auto;
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+  gap: 8px;
+  border-top: 1px solid var(--line);
+  border-bottom: 0;
+}
+.sidebar-foot svg { flex: 0 0 auto; }
 
 /* ── 가운데 뷰어 ──────────────────────────── */
 .viewers {
@@ -711,7 +749,7 @@ body.is-fullscreen .viewer:not(.is-active) { display: none; }
             padding: calc(8px + env(safe-area-inset-top)) 8px 8px; }
   .brand { height: 20px; }               /* 첫 줄(목록 버튼 · 로고 · 세팅 · Upload)에 다 들어오도록 더 줄인다 */
   .search-wrap { order: 2; flex: 1 1 100%; max-width: none; }
-  .fav-airports { order: 3; max-width: 100%; }
+  .fav-airports { order: 3; max-width: 100%; top: 0; }  /* 자기 줄이라 검색창에 맞춘 nudge가 필요 없다 */
   .top-actions { order: 1; }
   #btn-split { display: none; }        /* 휴대폰에서는 2분할이 너무 좁아 숨김 */
   .chart-placeholder { padding: 18px; }

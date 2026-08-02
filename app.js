@@ -16,7 +16,7 @@ const TYPES = ['SID', 'STAR', 'APP', 'TAXI', 'ETC'];
    KDEN_Denver_USA.pdf (공항 하나가 통째로 묶인 통합본)
    → icao=KDEN · type=ETC · 공항 이름 Denver · 국가 USA
    규칙에 안 맞는 이름도 버리지 않고 ETC(기타)로 살려둔다. */
-const NAME_RE = /^([A-Za-z0-9]+)[_ ]\[([^\]]+)\]\s*([^_]*)_(.+)$/;
+const NAME_RE = /^([A-Za-z0-9]+)[_ ]\[([^\]]+)\]\s*([^_,]*)[_,]\s*(.+)$/;
 
 /* 코드_이름_국가. 이름·국가에 숫자를 허용하지 않아야
    RKSS_10-9_AIRPORT 같은 차트 이름을 공항 이름으로 잘못 읽지 않는다 */
@@ -338,7 +338,48 @@ function renderAll() {
     : '';
 
   renderFavAirportChips();
+  renderAirportList();
   panes.forEach((_, i) => updateBar(i));
+}
+
+/* Airport 탭 — 차트가 들어 있는 공항 전체 목록. 눌러서 검색으로 바로 이동한다 */
+function renderAirportList() {
+  const box = $('#airport-body');
+  const codes = [...new Set(CHARTS.map(c => c.icao))].sort();
+  $('#airport-count').textContent = codes.length;
+
+  if (!codes.length) {
+    box.innerHTML = '<p class="empty-note">아직 넣어둔 차트가 없습니다.</p>';
+    return;
+  }
+  box.innerHTML = codes.map(icao => {
+    const apt = airports[icao] || {};
+    const label = [apt.name, apt.country].filter(Boolean).join(' · ');
+    return `<button class="airport-row" data-apt-select="${esc(icao)}">
+        <span class="apt-icao">${esc(icao)}</span>
+        ${label
+          ? `<span class="apt-name">${esc(label)}</span>`
+          : '<span class="apt-name apt-empty">이름 미입력</span>'}
+      </button>`;
+  }).join('');
+}
+
+/* 공항을 골랐을 때(Airport 탭이든 위쪽 즐겨찾기 칩이든) 공통으로 하는 일:
+   그 공항으로 검색하고, Airport 탭은 닫고 Result 탭을 편다 */
+function jumpToAirport(icao) {
+  $('#search').value = icao;
+  state.query = icao;
+  renderAll();
+
+  const airportHead = document.querySelector('[data-toggle="airport-body"]');
+  airportHead.classList.add('collapsed');
+  $('#airport-body').classList.add('collapsed');
+
+  const resultHead = document.querySelector('[data-toggle="result-body"]');
+  resultHead.classList.remove('collapsed');
+  $('#result-body').classList.remove('collapsed');
+
+  $('#layout').classList.remove('sidebar-hidden');
 }
 
 /* 즐겨찾기한 공항을 검색창 옆에 칩으로 나열. 누르면 그 공항으로 바로 검색된다 */
@@ -805,6 +846,9 @@ $('#btn-search-clear').addEventListener('click', () => {
 });
 
 $('#sidebar').addEventListener('click', e => {
+  const aptSelect = e.target.closest('[data-apt-select]');
+  if (aptSelect) { jumpToAirport(aptSelect.dataset.aptSelect); return; }
+
   const filterBtn = e.target.closest('.apt-filter-btn');
   if (filterBtn) {
     const icao = filterBtn.closest('.apt-filters').dataset.icao;
@@ -977,11 +1021,7 @@ $('#airport-table').addEventListener('click', e => {
 $('#fav-airports').addEventListener('click', e => {
   const chip = e.target.closest('[data-apt-jump]');
   if (!chip) return;
-  $('#search').value = chip.dataset.aptJump;
-  state.query = chip.dataset.aptJump;
-  renderAll();
-  // 좁은 화면에서 차트를 보고 있어 목록이 접혀 있던 경우, 검색 결과를 바로 보도록 펼친다
-  $('#layout').classList.remove('sidebar-hidden');
+  jumpToAirport(chip.dataset.aptJump);
 });
 
 $('#airport-table').addEventListener('input', e => {
