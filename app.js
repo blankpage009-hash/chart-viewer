@@ -16,7 +16,7 @@ const TYPES = ['SID', 'STAR', 'APP', 'TAXI', 'ETC'];
    KDEN_Denver_USA.pdf (공항 하나가 통째로 묶인 통합본)
    → icao=KDEN · type=ETC · 공항 이름 Denver · 국가 USA
    규칙에 안 맞는 이름도 버리지 않고 ETC(기타)로 살려둔다. */
-const NAME_RE = /^([A-Za-z0-9]+)_\[([^\]]+)\]\s*([^_]*)_(.+)$/;
+const NAME_RE = /^([A-Za-z0-9]+)[_ ]\[([^\]]+)\]\s*([^_]*)_(.+)$/;
 
 /* 코드_이름_국가. 이름·국가에 숫자를 허용하지 않아야
    RKSS_10-9_AIRPORT 같은 차트 이름을 공항 이름으로 잘못 읽지 않는다 */
