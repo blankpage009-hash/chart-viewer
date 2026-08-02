@@ -149,6 +149,7 @@ const KEY_FAV = 'ncv.favorites';
 const KEY_APT = 'ncv.airports';
 const KEY_APT_FAV = 'ncv.favAirports';
 const KEY_ROT = 'ncv.rotations';
+const KEY_THEME = 'ncv.theme';
 
 function load(key, fallback) {
   try { return JSON.parse(localStorage.getItem(key)) ?? fallback; }
@@ -163,6 +164,22 @@ let airports    = load(KEY_APT, {});
 let favAirports = load(KEY_APT_FAV, []);
 /* 차트마다 마지막으로 돌려 본 방향. 다시 열 때 그 방향 그대로 보여 준다 */
 let rotations   = load(KEY_ROT, {});
+/* 화면 색. 'light' 또는 'dark' (index.html 머리말에서 이미 한 번 적용해 둔다) */
+let theme       = load(KEY_THEME, 'light') === 'dark' ? 'dark' : 'light';
+
+function applyTheme(next) {
+  theme = next === 'dark' ? 'dark' : 'light';
+  // 밝은 테마는 표시를 아예 지워서, CSS 기본값(:root)이 그대로 쓰이게 한다
+  if (theme === 'dark') document.documentElement.dataset.theme = 'dark';
+  else delete document.documentElement.dataset.theme;
+  save(KEY_THEME, theme);
+  renderThemeTab();
+}
+
+function renderThemeTab() {
+  $$('#theme-list .theme-btn').forEach(b =>
+    b.classList.toggle('is-on', b.dataset.themeSet === theme));
+}
 
 /* 저장 공간 안내 (알아낸 뒤에만 목록 아래에 덧붙인다) */
 let storageNote = '';
@@ -1070,6 +1087,7 @@ function openSettings(tab = 'airport') {
   selectedFiles.clear();
   renderAirportTable();
   renderFileTable();
+  renderThemeTab();
   showTab(tab);
   $('#settings-modal').hidden = false;
 }
@@ -1078,6 +1096,10 @@ $('#btn-settings').addEventListener('click', () => openSettings());
 $('#modal-tabs').addEventListener('click', e => {
   const btn = e.target.closest('.tab-btn');
   if (btn) showTab(btn.dataset.tab);
+});
+$('#theme-list').addEventListener('click', e => {
+  const btn = e.target.closest('.theme-btn');
+  if (btn) applyTheme(btn.dataset.themeSet);
 });
 $('#settings-modal').addEventListener('click', e => {
   if (e.target.id === 'settings-modal' || e.target.closest('[data-close-modal]'))
@@ -1151,6 +1173,9 @@ if ('serviceWorker' in navigator) {
 navigator.storage?.persist?.()
   .then(ok => console.log(ok ? '차트 보관이 보호됩니다' : '보관 보호가 허락되지 않았습니다'))
   .catch(() => {});
+
+/* 머리말 코드가 막혀 있었을 경우를 대비해 한 번 더 맞춰 준다 */
+applyTheme(theme);
 
 [0, 1].forEach(i => { attachPinch(i); attachPan(i); });
 attachSidebarSwipe();

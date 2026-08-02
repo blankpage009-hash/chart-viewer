@@ -11,6 +11,49 @@
   --star:        #f0a419;
   --topbar-h:    50px;
   --sidebar-w:   290px;
+
+  /* 잔 색들도 변수로 둔다. 다크 테마에서 이 값들만 갈아끼우면 화면 전체 색이 한 번에 바뀐다 */
+  --head-bg:     #e3ebf4;   /* Favorite·Result 제목줄 */
+  --count-bg:    #dbe2ea;   /* 제목줄의 개수 알약 */
+  --apt-bg:      #fbfcfd;   /* 공항 코드 + 종류 필터 줄 */
+  --row-hover:   #f2f6fa;
+  --row-open:    #e4eefa;   /* 지금 열려 있는 차트 줄 */
+  --row-line:    #f0f3f6;   /* 줄 사이 얇은 선 */
+  --chip-bg:     #e9edf2;
+  --chip-hover:  #dde3ea;
+  --btn-hover:   #e7ecf2;
+  --bar-bg:      #f6f8fa;   /* 차트 칸 위쪽 제목 줄 */
+  --stage-bg:    #dfe4ea;   /* 차트 종이 뒤 바탕 */
+  --field-bg:    #ffffff;   /* 글자 넣는 칸 */
+  --tab-on-bg:   #e8f0fb;
+  --star-off:    #c3ccd6;
+  /* 체크상자·스크롤막대처럼 브라우저가 직접 그리는 부분도 테마에 맞춰 그려지게 한다 */
+  color-scheme: light;
+}
+
+/* 다크 테마 — 상단 바와 같은 네이비 계열로 화면 전체를 맞춘다.
+   차트 그림(캔버스)만은 원본 그대로 흰 종이로 둔다 */
+:root[data-theme="dark"] {
+  --line:        #2a4a70;
+  --bg:          #0b1d31;
+  --panel:       #14304f;
+  --text:        #e9eff6;
+  --text-dim:    #a3b6cb;
+  --head-bg:     #1c3f66;
+  --count-bg:    #27496f;
+  --apt-bg:      #173458;
+  --row-hover:   #1d436d;
+  --row-open:    #24568a;
+  --row-line:    #1e3d5f;
+  --chip-bg:     #22456c;
+  --chip-hover:  #2b5583;
+  --btn-hover:   #22456c;
+  --bar-bg:      #173458;
+  --stage-bg:    #0b1d31;
+  --field-bg:    #0f2740;
+  --tab-on-bg:   #1d4573;
+  --star-off:    #6d829a;
+  color-scheme: dark;
 }
 
 /* 차트 종류별 색: 목록에서 종류를 색으로 먼저 구분하기 위함 */
@@ -88,7 +131,7 @@ button { font-family: inherit; cursor: pointer; }
 .icon-btn.small  { min-width: 38px; height: 38px; font-size: 18px;
                    background: transparent; color: var(--text-dim); }
 .icon-btn.small svg { width: 18px; height: 18px; }
-.icon-btn.small:hover { background: #e7ecf2; color: var(--text); }
+.icon-btn.small:hover { background: var(--btn-hover); color: var(--text); }
 .icon-btn.small.is-fav { color: var(--star); }
 
 .text-btn {
@@ -113,18 +156,19 @@ button { font-family: inherit; cursor: pointer; }
   padding: 0 34px 0 14px;
   border: 0;
   border-radius: 8px;
-  background: #fff;
+  background: var(--field-bg);
   color: var(--text);
   font-size: 15px;
 }
 .search-wrap input:focus { outline: 2px solid var(--accent); }
+input::placeholder { color: var(--text-dim); }
 .clear-btn {
   position: absolute; right: 4px; top: 4px;
   width: 32px; height: 32px;
   border: 0; border-radius: 6px;
   background: transparent; color: var(--text-dim); font-size: 19px;
 }
-.clear-btn:hover { background: #eceff3; }
+.clear-btn:hover { background: var(--btn-hover); }
 
 /* 즐겨찾기한 공항 칩 (검색창 오른쪽). 8개 정도는 한 번에 보이고, 더 있으면 손가락으로 옆으로 밀어서 본다 */
 .fav-airports {
@@ -195,7 +239,7 @@ button { font-family: inherit; cursor: pointer; }
   padding: 11px 12px;
   border: 0;
   border-bottom: 1px solid var(--line);
-  background: #e3ebf4;      /* 연한 네이비 (밝은 회색이었던 것을 상단 바 색과 어울리게 바꿈) */
+  background: var(--head-bg);   /* 연한 네이비 (밝은 회색이었던 것을 상단 바 색과 어울리게 바꿈) */
   color: var(--text);
   font-size: 15px;
   font-weight: 700;
@@ -207,7 +251,7 @@ button { font-family: inherit; cursor: pointer; }
   margin-left: auto;
   padding: 1px 7px;
   border-radius: 9px;
-  background: #dbe2ea;
+  background: var(--count-bg);
   color: var(--text-dim);
   font-size: 11px;
 }
@@ -228,7 +272,7 @@ button { font-family: inherit; cursor: pointer; }
   position: sticky;
   top: 0;
   z-index: 2;
-  background: #fbfcfd;
+  background: var(--apt-bg);
 }
 .apt-head {
   display: flex;
@@ -236,7 +280,7 @@ button { font-family: inherit; cursor: pointer; }
   gap: 7px;
   width: 100%;
   padding: 9px 12px 6px;
-  background: #fbfcfd;
+  background: var(--apt-bg);
 }
 .apt-icao { font-size: 13px; font-weight: 700; letter-spacing: .5px; }
 .apt-name { font-size: 11.5px; color: var(--text-dim); overflow: hidden;
@@ -250,7 +294,7 @@ button { font-family: inherit; cursor: pointer; }
   flex-wrap: nowrap;
   gap: 3px;
   padding: 0 8px 8px;
-  background: #fbfcfd;
+  background: var(--apt-bg);
 }
 .apt-filter-btn {
   flex: 1 1 0;
@@ -259,7 +303,7 @@ button { font-family: inherit; cursor: pointer; }
   padding: 0 2px;
   border: 0;
   border-radius: 5px;
-  background: #e9edf2;
+  background: var(--chip-bg);
   color: var(--text-dim);
   font-size: 10px;
   font-weight: 700;
@@ -268,7 +312,7 @@ button { font-family: inherit; cursor: pointer; }
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.apt-filter-btn:hover { background: #dde3ea; }
+.apt-filter-btn:hover { background: var(--chip-hover); }
 .apt-filter-btn.is-on { background: var(--accent); color: #fff; }
 
 /* 차트 한 줄 = [차트 열기] + [별표] + [지우기] */
@@ -276,10 +320,10 @@ button { font-family: inherit; cursor: pointer; }
   display: flex;
   align-items: center;
   width: 100%;
-  border-top: 1px solid #f0f3f6;
+  border-top: 1px solid var(--row-line);
 }
-.chart-row:hover { background: #f2f6fa; }
-.chart-row.is-open { background: #e4eefa; box-shadow: inset 3px 0 0 var(--accent); }
+.chart-row:hover { background: var(--row-hover); }
+.chart-row.is-open { background: var(--row-open); box-shadow: inset 3px 0 0 var(--accent); }
 
 .row-main {
   flex: 1 1 auto;
@@ -317,10 +361,10 @@ button { font-family: inherit; cursor: pointer; }
   margin-right: 4px;
   border: 0; border-radius: 6px;
   background: transparent;
-  color: #c3ccd6;
+  color: var(--star-off);
   font-size: 17px;
 }
-.star-btn:hover { background: #e7ecf2; }
+.star-btn:hover { background: var(--btn-hover); }
 .star-btn.is-on { color: var(--star); }
 
 /* 왼쪽 목록 맨 아래 보관 현황 */
@@ -360,7 +404,7 @@ button { font-family: inherit; cursor: pointer; }
   gap: 4px;
   padding: 5px 6px 5px 12px;
   border-bottom: 1px solid var(--line);
-  background: #f6f8fa;
+  background: var(--bar-bg);
 }
 .viewer-title {
   font-size: 15px;
@@ -385,7 +429,7 @@ button { font-family: inherit; cursor: pointer; }
   overflow: auto;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
-  background: #dfe4ea;
+  background: var(--stage-bg);
   display: grid;
   place-items: safe center;
   padding: 3px;
@@ -424,7 +468,8 @@ button { font-family: inherit; cursor: pointer; }
 .busy-box {
   padding: 18px 26px;
   border-radius: 10px;
-  background: #fff;
+  background: var(--panel);
+  color: var(--text);
   font-size: 14px;
   box-shadow: 0 8px 26px rgba(0,0,0,.25);
 }
@@ -441,7 +486,7 @@ button { font-family: inherit; cursor: pointer; }
   width: 560px; max-width: 100%; max-height: 84vh;
   display: flex; flex-direction: column;
   border-radius: 12px;
-  background: #fff;
+  background: var(--panel);
   overflow: hidden;
 }
 .modal-head {
@@ -450,7 +495,7 @@ button { font-family: inherit; cursor: pointer; }
   border-bottom: 1px solid var(--line);
 }
 .modal-head h2 { margin: 0; font-size: 16px; flex: 1 1 auto; }
-.modal-head .icon-btn { background: #eceff3; color: var(--text); }
+.modal-head .icon-btn { background: var(--chip-bg); color: var(--text); }
 .modal-note { margin: 0; padding: 12px 18px 6px; font-size: 12.5px; color: var(--text-dim); }
 .airport-table { flex: 1 1 auto; overflow-y: auto; padding: 6px 18px 18px; }
 
@@ -471,8 +516,8 @@ button { font-family: inherit; cursor: pointer; }
   font-size: 14px;
   font-weight: 700;
 }
-.tab-btn:hover { background: #f2f5f8; }
-.tab-btn.is-on { background: #e8f0fb; color: var(--accent); box-shadow: inset 0 -2px 0 var(--accent); }
+.tab-btn:hover { background: var(--btn-hover); }
+.tab-btn.is-on { background: var(--tab-on-bg); color: var(--accent); box-shadow: inset 0 -2px 0 var(--accent); }
 
 /* 탭 하나가 창의 남은 높이를 다 쓰고, 그 안의 목록만 스크롤되게 한다 */
 .tab-panel { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
@@ -485,6 +530,7 @@ button { font-family: inherit; cursor: pointer; }
   padding: 0 32px 0 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
+  background: var(--field-bg);
   font-size: 14px;
   font-family: inherit;
   color: var(--text);
@@ -504,7 +550,7 @@ button { font-family: inherit; cursor: pointer; }
 .file-sum { flex: 1 1 auto; min-width: 0; font-size: 12px; color: var(--text-dim); }
 .text-btn.danger { background: #d0483f; color: #fff; }
 .text-btn.danger:hover { background: #e0574d; }
-.text-btn.danger:disabled { background: #e3e7ec; color: #a7b1bd; cursor: default; }
+.text-btn.danger:disabled { background: var(--chip-bg); color: var(--text-dim); cursor: default; }
 
 .file-table { flex: 1 1 auto; overflow-y: auto; padding: 4px 18px 18px; }
 .file-row {
@@ -512,10 +558,10 @@ button { font-family: inherit; cursor: pointer; }
   align-items: center;
   gap: 9px;
   padding: 7px 4px;
-  border-bottom: 1px solid #f0f3f6;
+  border-bottom: 1px solid var(--row-line);
   cursor: pointer;
 }
-.file-row:hover { background: #f5f8fb; }
+.file-row:hover { background: var(--row-hover); }
 .file-info { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
 .file-main { font-size: 12.5px; line-height: 1.35; word-break: break-word; }
 .file-sub  { font-size: 11px; color: var(--text-dim);
@@ -527,10 +573,10 @@ button { font-family: inherit; cursor: pointer; }
   width: 28px; height: 28px;
   border: 0; border-radius: 6px;
   background: transparent;
-  color: #c3ccd6;
+  color: var(--star-off);
   font-size: 16px;
 }
-.apt-row .apt-fav-toggle:hover { background: #eef1f5; }
+.apt-row .apt-fav-toggle:hover { background: var(--btn-hover); }
 .apt-row .apt-fav-toggle.is-on { color: var(--star); }
 .apt-row .code {
   flex: 0 0 60px; font-weight: 700; font-size: 13px; letter-spacing: .5px;
@@ -539,13 +585,50 @@ button { font-family: inherit; cursor: pointer; }
   flex: 1 1 auto; min-width: 0; height: 38px;
   padding: 0 10px;
   border: 1px solid var(--line); border-radius: 7px;
+  background: var(--field-bg); color: var(--text);
   font-size: 14px; font-family: inherit;
 }
 .apt-row input:focus { outline: 2px solid var(--accent); border-color: transparent; }
 /* 목록에서 눌러 들어온 공항이 어느 줄인지 알려준다 */
-.apt-row.is-target { background: #eaf2fe; border-radius: 8px; }
+.apt-row.is-target { background: var(--row-open); border-radius: 8px; }
 .modal-foot { padding: 12px 18px; border-top: 1px solid var(--line); text-align: right; }
 .modal-foot .text-btn { color: #fff; }
+
+/* Theme 칸 — 밝게 / 어둡게 중 하나를 고른다 */
+.theme-list { flex: 1 1 auto; overflow-y: auto; padding: 6px 18px 18px;
+              display: flex; flex-direction: column; gap: 8px; }
+.theme-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+}
+.theme-btn:hover { background: var(--btn-hover); }
+.theme-btn.is-on { border-color: var(--accent); background: var(--tab-on-bg); }
+/* 고르기 전에 어떤 색인지 보이도록 작은 색 견본을 붙인다 */
+.theme-swatch {
+  flex: 0 0 auto;
+  width: 40px; height: 30px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  overflow: hidden;
+}
+.theme-swatch b { display: block; height: 9px; background: var(--navy); }
+.theme-swatch.light { background: #eef1f5; }
+.theme-swatch.dark  { background: #0b1d31; }
+.theme-name { flex: 1 1 auto; display: flex; flex-direction: column; gap: 2px; }
+.theme-name b     { font-size: 14px; }
+.theme-name small { font-size: 11.5px; color: var(--text-dim); }
+/* 고른 것에만 체크 표시. 기기마다 모양이 달라지지 않도록 글자(✓) 대신 그림으로 그린다 */
+.theme-check { flex: 0 0 auto; color: var(--accent); visibility: hidden; }
+.theme-btn.is-on .theme-check { visibility: visible; }
+.theme-check svg { display: block; }
 
 /* ── 안내 문구 ────────────────────────────── */
 .toast {
