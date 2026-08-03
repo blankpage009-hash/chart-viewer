@@ -200,7 +200,8 @@ const state = {
   query: '',
   split: false,
   activePane: 0,
-  fullscreen: false,     // 전체 화면 보기 (상단 바·사이드바를 감추고 차트 하나만 채움)
+  fullscreen: false,     // 전체 화면 보기 (상단 바를 감추고 차트 하나만 채움)
+  sidebarWasHidden: false, // 전체 화면에 들어가기 직전의 목록 상태 (나올 때 그대로 되돌리려고 기억한다)
   groupType: {}          // 공항(ICAO)별로 따로 고르는 종류 필터. 비어 있으면 'ALL'
 };
 
@@ -662,7 +663,8 @@ async function openChart(file) {
       '<p class="ph-hint">이 파일을 열지 못했습니다.<br>PDF가 아니거나 손상된 파일일 수 있습니다.</p>');
   }
 
-  if (window.innerWidth <= 900) $('#layout').classList.add('sidebar-hidden');
+  // 전체 화면에서는 목록이 차트 위에 겹쳐 뜨므로, 차트를 고르면 비켜 준다
+  if (state.fullscreen || window.innerWidth <= 900) $('#layout').classList.add('sidebar-hidden');
 }
 
 function closePane(i, opts = {}) {
@@ -685,6 +687,28 @@ function renderRowStates() {
    손짓을 무시한다. 사이드바 판정 폭(34px)보다 넉넉히 잡아 살짝 안쪽에서 시작해도 겹치지 않게 했다 */
 const SIDEBAR_EDGE   = 34;
 const SWIPE_DEAD_LEFT = 64;
+
+/* 전체 화면 보기 켜고 끄기. 상단 바(＋목록 여는 ☰ 버튼)가 사라지므로, 들어갈 때는 목록을 접어
+   차트만 보이게 시작하고 나올 때는 들어가기 직전 상태로 되돌린다.
+   전체 화면 중에도 왼쪽 가장자리를 쓸면 목록을 차트 위에 겹쳐 띄울 수 있다 */
+async function setFullscreen(i, on) {
+  if (state.fullscreen === on) return;
+  const layout = $('#layout');
+
+  if (on) {
+    state.sidebarWasHidden = layout.classList.contains('sidebar-hidden');
+    state.activePane = i;
+    layout.classList.add('sidebar-hidden');
+  } else if (!state.sidebarWasHidden) {
+    layout.classList.remove('sidebar-hidden');
+  }
+
+  state.fullscreen = on;
+  document.body.classList.toggle('is-fullscreen', on);
+  panes.forEach((_, k) => updateBar(k));
+  // 칸 크기가 바뀌었으니 화면 맞춤 배율을 다시 계산해서 다시 그린다
+  for (const k of [0, 1]) if (panes[k].page) await drawPage(k);
+}
 
 /* 차트를 넘길 때 미끄러지는 효과. 가던 방향으로 밀어냈다가 새 차트를 반대쪽에서 밀어 넣는다.
    run() 이 실제로 차트를 여는 일을 맡고, 그 사이 화면은 밀려나간 자리에 그대로 비워 둔다 */
@@ -761,7 +785,8 @@ async function stepChart(i, dir) {
 function attachChartSwipe(i) {
   const body = bodyEl(i);
   const MIN_X = 50;      // 이만큼은 옆으로 그어야 넘긴다
-  let sx = 0, sy = 0, watching = false;
+  const MIN_Y = 60;      // 이만큼은 위아래로 그어야 전체 화면이 바뀐다
+  let sx = 0, sy = 0, watching = false, deadLeft = false;
 
   body.addEventListener('touchstart', e => {
     const p = panes[i];
@@ -769,8 +794,7 @@ function attachChartSwipe(i) {
     if (!watching) return;
     sx = e.touches[0].clientX;
     sy = e.touches[0].clientY;
-    // 전체 화면에서는 사이드바 열기 쓸기가 아예 꺼져 있으므로, 왼쪽 끝에서 시작해도 넘길 수 있다
-    if (!document.body.classList.contains('is-fullscreen') && sx <= SWIPE_DEAD_LEFT) watching = false;
+    deadLeft = sx <= SWIPE_DEAD_LEFT;
   }, { passive: true });
 
   body.addEventListener('touchend', e => {
@@ -779,7 +803,17 @@ function attachChartSwipe(i) {
     const t = e.changedTouches[0];
     const dx = t.clientX - sx;
     const dy = t.clientY - sy;
-    // 위아래로 그은 것은 무시한다
+
+    // 위아래로 그은 것 — 위로 쓸면 전체 화면, 아래로 쓸면 전체 화면 나가기 (2026-08-03 요청).
+    // 목록 열기는 가로 쓸기만 보므로, 왼쪽 가장자리에서 시작해도 그대로 받는다
+    if (Math.abs(dy) >= MIN_Y && Math.abs(dy) > Math.abs(dx) * 1.2) {
+      setFullscreen(i, dy < 0);
+      return;
+    }
+
+    // 왼쪽 가장자리는 '목록 열기' 몫이라 차트 넘기기로 쓰지 않는다 (전체 화면에서도 마찬가지다 —
+    // 전체 화면에서도 목록을 열 수 있게 되면서 다시 부딪히게 됐다)
+    if (deadLeft) return;
     if (Math.abs(dx) < MIN_X || Math.abs(dx) < Math.abs(dy) * 1.2) return;
     stepChart(i, dx < 0 ? 1 : -1);
   }, { passive: true });
@@ -1044,6 +1078,45 @@ $$('.section-head').forEach(head => {
   });
 });
 
+/* 로고를 누르면 화면을 처음 켰을 때 상태로 되돌린다 (2026-08-03 요청).
+   되돌리는 것은 '지금 보고 있는 화면'뿐이다 — 넣어둔 차트 PDF, 즐겨찾기, 공항 이름·국가,
+   차트 회전 방향, 테마는 건드리지 않는다. 실수로 눌릴 자리라 확인을 한 번 받는다 */
+function resetView() {
+  panes.forEach((_, i) => closePane(i));
+
+  state.query = '';
+  state.split = false;
+  state.activePane = 0;
+  state.groupType = {};
+  $('#search').value = '';
+
+  $('#viewers').classList.remove('split');
+  $('#btn-split').classList.remove('is-on');
+  viewEl(1).hidden = true;
+
+  state.fullscreen = false;
+  state.sidebarWasHidden = false;
+  document.body.classList.remove('is-fullscreen');
+
+  $('#settings-modal').hidden = true;
+  $('#layout').classList.remove('sidebar-hidden');
+
+  // 목록 접힘 상태도 index.html 의 처음 모양대로 (Pinboards만 접혀 있다)
+  [['fav-body', true], ['airport-body', false], ['result-body', false]].forEach(([id, folded]) => {
+    document.querySelector(`[data-toggle="${id}"]`).classList.toggle('collapsed', folded);
+    $('#' + id).classList.toggle('collapsed', folded);
+  });
+
+  renderAll();
+  $('#sidebar').scrollTop = 0;
+}
+
+$('#btn-reset').addEventListener('click', () => {
+  if (!confirm('화면을 처음 상태로 되돌릴까요?\n\n(넣어둔 차트와 즐겨찾기·공항 이름·설정은 그대로 있습니다)')) return;
+  resetView();
+  toast('처음 상태로 되돌렸습니다.');
+});
+
 $('#btn-sidebar').addEventListener('click', () =>
   $('#layout').classList.toggle('sidebar-hidden'));
 $('#sidebar-scrim').addEventListener('click', () =>
@@ -1061,7 +1134,6 @@ function attachSidebarSwipe() {
   document.addEventListener('touchstart', e => {
     watching = false;
     if (e.touches.length !== 1) return;                       // 두 손가락 확대는 건드리지 않는다
-    if (document.body.classList.contains('is-fullscreen')) return;
     if (!$('#settings-modal').hidden) return;
 
     const t = e.touches[0];
@@ -1117,15 +1189,7 @@ $('#viewers').addEventListener('click', async e => {
       return;
     case 'prev': await loadPage(i, p.pageNum - 1); return;
     case 'next': await loadPage(i, p.pageNum + 1); return;
-    case 'fullscreen': {
-      state.fullscreen = !state.fullscreen;
-      if (state.fullscreen) state.activePane = i;
-      document.body.classList.toggle('is-fullscreen', state.fullscreen);
-      panes.forEach((_, k) => updateBar(k));
-      // 칸 크기가 바뀌었으니 화면 맞춤 배율을 다시 계산해서 다시 그린다
-      for (const k of [0, 1]) if (panes[k].page) await drawPage(k);
-      return;
-    }
+    case 'fullscreen': await setFullscreen(i, !state.fullscreen); return;
     case 'fav': {
       if (!p.file) return;
       const at = favorites.indexOf(p.file);

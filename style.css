@@ -101,6 +101,15 @@ button { font-family: inherit; cursor: pointer; }
   z-index: 40;
 }
 
+/* 로고 자체가 '처음 상태로' 버튼이다. mix-blend-mode 가 상단 바와 섞여야 하므로
+   바탕·테두리를 두지 않는다 (바탕을 주면 흰 사각형이 보인다 — .brand 주석 참고) */
+.brand-btn {
+  display: block;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
 .brand {
   height: 32px;
   width: auto;
@@ -765,9 +774,22 @@ input::placeholder { color: var(--text-dim); }
 
 /* ── 차트 전체 화면 보기 ──────────────────────
    상단 바·사이드바를 감추고, 보고 있던 칸 하나만 화면 전체를 채운다 */
-body.is-fullscreen .topbar,
-body.is-fullscreen .sidebar,
-body.is-fullscreen .sidebar-scrim { display: none !important; }
+body.is-fullscreen .topbar { display: none !important; }
+/* 전체 화면에서도 목록을 열고 닫을 수 있다 (2026-08-03 요청). 상단 바(☰ 버튼)가 없으므로
+   왼쪽 가장자리 쓸기로 열고, 좁은 화면과 같은 방식으로 차트 위에 겹쳐 띄운다.
+   상단 바가 없는 만큼 시계·배터리 자리는 목록이 직접 피한다 */
+body.is-fullscreen .sidebar {
+  position: absolute;
+  top: 0; left: 0; bottom: 0;
+  z-index: 30;
+  box-shadow: 2px 0 14px rgba(0,0,0,.18);
+  padding-top: env(safe-area-inset-top);
+}
+body.is-fullscreen .layout:not(.sidebar-hidden) .sidebar-scrim {
+  display: block;
+  position: absolute; inset: 0; z-index: 20;
+  background: rgba(14,28,44,.32);
+}
 body.is-fullscreen .viewers {
   gap: 0;
   padding: env(safe-area-inset-top) env(safe-area-inset-right)
