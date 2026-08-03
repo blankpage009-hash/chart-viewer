@@ -247,6 +247,14 @@ function pinIcon() {
       </g></g></svg>`;
 }
 
+/* 공항 즐겨찾기(사이드바 Airport 탭 전용) 아이콘 = 별표. 차트 즐겨찾기(압정)와 모양을 다르게 해서
+   "공항을 찜한다"와 "차트를 찜한다"가 헷갈리지 않게 한다 */
+function starIcon() {
+  return `<svg class="star-icon" width="15" height="15" viewBox="0 0 24 24" aria-hidden="true">
+      <path fill="currentColor" d="M12 2.5l2.98 6.04 6.67.97-4.83 4.7 1.14 6.65L12 17.77l-5.96 3.13 1.14-6.65-4.83-4.7 6.67-.97L12 2.5z"/>
+    </svg>`;
+}
+
 function chartRow(chart) {
   const row = document.createElement('div');
   row.className = 'chart-row';
@@ -280,7 +288,11 @@ function groupByAirport(list) {
    검색 결과에서만 쓰고, 즐겨찾기에는 필요 없다고 해서 안 붙인다 */
 function renderGroupedList(container, list, opts = {}) {
   container.innerHTML = '';
-  groupByAirport(list).forEach((charts, icao) => {
+  const grouped = groupByAirport(list);
+  // 공항이 딱 하나만 나올 때는 Charts 제목 옆에 이름·국가를 대신 보여주므로, 묶음 위 머리글은 생략한다
+  const skipHead = opts.hideAptHeadIfSingle && grouped.size === 1;
+
+  grouped.forEach((charts, icao) => {
     const apt = airports[icao] || {};
     const label = [apt.name, apt.country].filter(Boolean).join(' · ');
 
@@ -291,7 +303,7 @@ function renderGroupedList(container, list, opts = {}) {
     const head = document.createElement('div');
     head.className = 'apt-head-sticky';
     // 이름·국가 입력은 상단 [공항 정보] 창에서만 한다 (목록 머리글을 눌러 여는 기능은 없앰)
-    head.innerHTML = `<div class="apt-head">
+    head.innerHTML = skipHead ? '' : `<div class="apt-head">
         <span class="apt-icao">${esc(icao)}</span>
         ${label
           ? `<span class="apt-name">${esc(label)}</span>`
@@ -320,13 +332,31 @@ function renderGroupedList(container, list, opts = {}) {
     }
     container.appendChild(group);
   });
+
+  return grouped;
+}
+
+/* Charts 제목 줄 옆에 "공항이 하나만 나왔을 때" 이름·국가를 보여준다 (여러 공항이 섞이면 숨긴다) */
+function updateChartsHeaderAirport(grouped) {
+  const info = $('#result-airport-info');
+  const divider = $('#result-divider');
+  let label = '';
+  if (grouped && grouped.size === 1) {
+    const icao = [...grouped.keys()][0];
+    const apt = airports[icao] || {};
+    label = [apt.name, apt.country].filter(Boolean).join(' · ');
+  }
+  info.textContent = label;
+  info.hidden = !label;
+  divider.hidden = !label;
 }
 
 function renderAll() {
   const q = state.query;
   const searchList = q ? CHARTS.filter(c => matches(c, q)) : [];
 
-  renderGroupedList($('#result-body'), searchList, { withFilter: true });
+  const resultGroups = renderGroupedList($('#result-body'), searchList, { withFilter: true, hideAptHeadIfSingle: true });
+  updateChartsHeaderAirport(resultGroups);
   $('#result-count').textContent = searchList.length;
   if (!searchList.length) {
     $('#result-body').innerHTML = !q
@@ -366,12 +396,17 @@ function renderAirportList() {
   box.innerHTML = codes.map(icao => {
     const apt = airports[icao] || {};
     const label = [apt.name, apt.country].filter(Boolean).join(' · ');
-    return `<button class="airport-row" data-apt-select="${esc(icao)}">
-        <span class="apt-icao">${esc(icao)}</span>
-        ${label
-          ? `<span class="apt-name">${esc(label)}</span>`
-          : '<span class="apt-name apt-empty">이름 미입력</span>'}
-      </button>`;
+    const isFav = favAirports.includes(icao);
+    return `<div class="airport-row">
+        <button class="apt-row-main" data-apt-select="${esc(icao)}">
+          <span class="apt-icao">${esc(icao)}</span>
+          ${label
+            ? `<span class="apt-name">${esc(label)}</span>`
+            : '<span class="apt-name apt-empty">이름 미입력</span>'}
+        </button>
+        <button class="apt-fav-toggle${isFav ? ' is-on' : ''}" data-apt-fav="${esc(icao)}"
+                title="공항 즐겨찾기">${starIcon()}</button>
+      </div>`;
   }).join('');
 }
 
@@ -412,10 +447,12 @@ function updateBar(i) {
   view.classList.toggle('is-active', i === state.activePane);
   view.classList.toggle('has-chart', !!p.file);
 
-  // 파일 이름 맨 앞에 종류(SID/STAR/APP/TAXI/etc) 배지를 붙여, 지금 보는 차트가 어떤 종류인지 바로 보이게 한다
+  // 맨 앞엔 공항 ICAO 코드를 흰 판(공항 명판 느낌)으로, 그다음 종류(SID/STAR/APP/TAXI/etc) 배지를 붙인다.
+  // 코드가 앞에 따로 나오니 뒤 제목 글자에서는 ICAO를 반복하지 않는다
   view.querySelector('.viewer-title').innerHTML = chart
-    ? `<span class="badge badge-${chart.type}">${esc(chart.type === 'ETC' ? (chart.rawType || 'ETC') : chart.type)}</span>` +
-      `<span class="viewer-title-text">${esc(chart.icao)}  ${esc(chart.no)}  ${esc(chart.title)}</span>`
+    ? `<span class="icao-badge">${esc(chart.icao)}</span>` +
+      `<span class="badge badge-${chart.type}">${esc(chart.type === 'ETC' ? (chart.rawType || 'ETC') : chart.type)}</span>` +
+      `<span class="viewer-title-text">${esc(chart.no)}  ${esc(chart.title)}</span>`
     : '<span class="viewer-title-text">차트를 선택하세요</span>';
 
   const favBtn = view.querySelector('[data-act="fav"]');
@@ -904,6 +941,17 @@ $('#btn-search-clear').addEventListener('click', () => {
 });
 
 $('#sidebar').addEventListener('click', e => {
+  const aptFav = e.target.closest('[data-apt-fav]');
+  if (aptFav) {
+    const icao = aptFav.dataset.aptFav;
+    const at = favAirports.indexOf(icao);
+    if (at >= 0) favAirports.splice(at, 1); else favAirports.push(icao);
+    save(KEY_APT_FAV, favAirports);
+    aptFav.classList.toggle('is-on');
+    renderFavAirportChips();
+    return;
+  }
+
   const aptSelect = e.target.closest('[data-apt-select]');
   if (aptSelect) { jumpToAirport(aptSelect.dataset.aptSelect); return; }
 
@@ -1051,10 +1099,7 @@ function renderAirportTable() {
   codes.forEach(icao => {
     const row = document.createElement('div');
     row.className = 'apt-row';
-    const isFav = favAirports.includes(icao);
     row.innerHTML = `
-      <button class="apt-fav-toggle${isFav ? ' is-on' : ''}" data-apt-fav="${esc(icao)}"
-              title="공항 즐겨찾기">${pinIcon()}</button>
       <span class="code">${esc(icao)}</span>
       <input data-apt="${esc(icao)}" data-field="name"    placeholder="공항 이름 (예: Gimpo Intl)">
       <input data-apt="${esc(icao)}" data-field="country" placeholder="국가 (예: Korea)">`;
@@ -1063,18 +1108,6 @@ function renderAirportTable() {
     box.appendChild(row);
   });
 }
-
-$('#airport-table').addEventListener('click', e => {
-  const favBtn = e.target.closest('[data-apt-fav]');
-  if (!favBtn) return;
-  const icao = favBtn.dataset.aptFav;
-  const at = favAirports.indexOf(icao);
-  if (at >= 0) favAirports.splice(at, 1); else favAirports.push(icao);
-  save(KEY_APT_FAV, favAirports);
-  favBtn.classList.toggle('is-on');
-  favBtn.innerHTML = pinIcon();
-  renderFavAirportChips();
-});
 
 $('#fav-airports').addEventListener('click', e => {
   const chip = e.target.closest('[data-apt-jump]');
