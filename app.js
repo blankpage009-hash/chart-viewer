@@ -680,9 +680,62 @@ function renderRowStates() {
     row.classList.toggle('is-open', panes.some(p => p.file === row.dataset.file)));
 }
 
+/* 왼쪽 가장자리에서 시작한 좌우 쓸기는 '사이드바 열기'가 먼저 차지하고 있다 (attachSidebarSwipe).
+   한 손짓에 사이드바가 열리면서 차트까지 넘어가 버리지 않도록, 차트 넘기기는 이 폭 안에서 시작한
+   손짓을 무시한다. 사이드바 판정 폭(34px)보다 넉넉히 잡아 살짝 안쪽에서 시작해도 겹치지 않게 했다 */
+const SIDEBAR_EDGE   = 34;
+const SWIPE_DEAD_LEFT = 64;
+
+/* 차트를 넘길 때 미끄러지는 효과. 가던 방향으로 밀어냈다가 새 차트를 반대쪽에서 밀어 넣는다.
+   run() 이 실제로 차트를 여는 일을 맡고, 그 사이 화면은 밀려나간 자리에 그대로 비워 둔다 */
+async function slideSwap(i, dir, run) {
+  const stage = viewEl(i).querySelector('.chart-stage');
+  const body  = bodyEl(i);
+  // 움직임을 줄여 달라고 설정한 기기에서는 효과 없이 바로 바꾼다
+  if (!stage?.animate || matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    await run();
+    return;
+  }
+
+  const d = Math.max(120, body.clientWidth * 0.35);
+  body.classList.add('is-sliding');   // 미는 동안 삐져나간 부분이 스크롤로 잡히지 않게 한다
+
+  // 끝난 뒤 반드시 직접 붙잡은 것으로 되돌린다. stage.getAnimations()로 훑어서 지우면 안 된다 —
+  // 끝난 애니메이션이 목록에서는 빠지면서 fill:forwards 효과만 남아, 차트가 화면 밖에 세워진 채
+  // 영영 안 보이게 된다 (2026-08-03에 실제로 겪음)
+  let out = null, back = null;
+  try {
+    // 새 차트를 그리는 동안 가운데에 다시 나타나지 않도록 밀려난 자리에 세워 둔다
+    out = stage.animate(
+      [{ transform: 'translateX(0)', opacity: 1 },
+       { transform: `translateX(${-dir * d}px)`, opacity: 0 }],
+      { duration: 150, easing: 'ease-in', fill: 'forwards' }
+    );
+    await out.finished;
+
+    await run();
+
+    back = stage.animate(
+      [{ transform: `translateX(${dir * d}px)`, opacity: 0 },
+       { transform: 'translateX(0)', opacity: 1 }],
+      { duration: 190, easing: 'ease-out' }
+    );
+    await back.finished;
+  } finally {
+    try { out?.cancel(); } catch {}
+    try { back?.cancel(); } catch {}
+    stage.style.transform = '';
+    stage.style.opacity   = '';
+    body.classList.remove('is-sliding');
+  }
+}
+
 /* 같은 공항의 차트 목록(전체 종류, CHARTS의 정렬 순서 그대로) 안에서 이전·다음으로 넘어간다.
    dir 은 -1(이전) 또는 1(다음) */
-function stepChart(i, dir) {
+let stepping = false;   // 넘어가는 도중에 손짓이 겹쳐 들어와 두 장씩 건너뛰는 것을 막는다
+
+async function stepChart(i, dir) {
+  if (stepping) return;
   const chart = CHARTS.find(c => c.file === panes[i].file);
   if (!chart) return;
   const siblings = CHARTS.filter(c => c.icao === chart.icao);
@@ -694,7 +747,12 @@ function stepChart(i, dir) {
     state.activePane = i;
     panes.forEach((_, k) => updateBar(k));
   }
-  openChart(next.file);
+  stepping = true;
+  try {
+    await slideSwap(i, dir, () => openChart(next.file));
+  } finally {
+    stepping = false;
+  }
 }
 
 /* 차트가 화면 맞춤(100%) 배율일 때는 가로로 넘칠 내용이 없어 좌우 스와이프가 그냥 버려지므로,
@@ -711,6 +769,8 @@ function attachChartSwipe(i) {
     if (!watching) return;
     sx = e.touches[0].clientX;
     sy = e.touches[0].clientY;
+    // 전체 화면에서는 사이드바 열기 쓸기가 아예 꺼져 있으므로, 왼쪽 끝에서 시작해도 넘길 수 있다
+    if (!document.body.classList.contains('is-fullscreen') && sx <= SWIPE_DEAD_LEFT) watching = false;
   }, { passive: true });
 
   body.addEventListener('touchend', e => {
@@ -994,8 +1054,8 @@ $('#sidebar-scrim').addEventListener('click', () =>
    그래야 차트 위를 손가락으로 미는 동작(이동·확대)과 부딪히지 않는다 */
 function attachSidebarSwipe() {
   const layout = $('#layout');
-  const EDGE  = 34;   // 가장자리로 인정하는 폭
-  const MIN_X = 55;   // 이만큼은 옆으로 그어야 반응한다
+  const EDGE  = SIDEBAR_EDGE;   // 가장자리로 인정하는 폭 (차트 넘기기 쪽과 값을 함께 쓴다)
+  const MIN_X = 55;             // 이만큼은 옆으로 그어야 반응한다
   let sx = 0, sy = 0, watching = false;
 
   document.addEventListener('touchstart', e => {

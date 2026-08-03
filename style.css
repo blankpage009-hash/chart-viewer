@@ -362,7 +362,8 @@ input::placeholder { color: var(--text-dim); }
   align-items: baseline;
   gap: 7px;
   width: 100%;
-  padding: 9px 12px 6px;
+  /* 아래 여백은 .apt-filters 의 위쪽 padding 이 대신 만든다 (머리글이 없는 경우에도 여백이 같도록) */
+  padding: 9px 12px 0;
   background: var(--apt-bg);
 }
 .apt-icao { font-size: 13px; font-weight: 700; letter-spacing: .5px; }
@@ -376,7 +377,8 @@ input::placeholder { color: var(--text-dim); }
   display: flex;
   flex-wrap: nowrap;
   gap: 3px;
-  padding: 0 8px 8px;
+  /* 공항이 하나만 나올 때는 위 머리글이 통째로 빠지므로, 위 여백을 아래와 같이 8px씩 직접 갖는다 */
+  padding: 8px;
   background: var(--apt-bg);
 }
 .apt-filter-btn {
@@ -554,6 +556,9 @@ input::placeholder { color: var(--text-dim); }
   padding: 3px;
   touch-action: pan-x pan-y;      /* 두 손가락 확대는 앱이 직접 처리 */
 }
+
+/* 차트가 옆으로 미끄러지는 동안에는 삐져나간 부분이 스크롤로 잡히지 않게 잠깐 잘라낸다 */
+.viewer-body.is-sliding { overflow: hidden; }
 
 /* 마우스로 붙잡아 끌어서 이동 */
 .viewer.has-chart .viewer-body { cursor: grab; }
