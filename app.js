@@ -411,13 +411,10 @@ function renderAirportList() {
   }).join('');
 }
 
-/* 공항을 골랐을 때(Airport 탭이든 위쪽 즐겨찾기 칩이든) 공통으로 하는 일:
-   그 공항으로 검색하고, Airport 탭은 닫고 Charts 탭을 편다 */
-function jumpToAirport(icao) {
-  $('#search').value = icao;
-  state.query = icao;
-  renderAll();
-
+/* 검색 결과가 생겼을 때 Charts 칸을 화면 위쪽으로 데려온다.
+   공항이 여러 개 들어 있으면 Airport 목록이 사이드바를 통째로 차지해서, 검색해도 Charts 칸이
+   스크롤 한참 아래에 그려질 뿐이라 '검색창이 먹통'인 것처럼 보였다 (2026-08-04 지적) */
+function focusChartsSection() {
   const airportHead = document.querySelector('[data-toggle="airport-body"]');
   airportHead.classList.add('collapsed');
   $('#airport-body').classList.add('collapsed');
@@ -426,6 +423,23 @@ function jumpToAirport(icao) {
   resultHead.classList.remove('collapsed');
   $('#result-body').classList.remove('collapsed');
 
+  $('#sidebar').scrollTop = 0;
+}
+
+/* 검색창을 비웠을 때 — 공항을 다시 훑어볼 수 있도록 Airport 목록을 펴 준다 */
+function unfocusChartsSection() {
+  document.querySelector('[data-toggle="airport-body"]').classList.remove('collapsed');
+  $('#airport-body').classList.remove('collapsed');
+  $('#sidebar').scrollTop = 0;
+}
+
+/* 공항을 골랐을 때(Airport 탭이든 위쪽 즐겨찾기 칩이든) 공통으로 하는 일:
+   그 공항으로 검색하고, Airport 탭은 닫고 Charts 탭을 편다 */
+function jumpToAirport(icao) {
+  $('#search').value = icao;
+  state.query = icao;
+  renderAll();
+  focusChartsSection();
   $('#layout').classList.remove('sidebar-hidden');
 }
 
@@ -710,18 +724,56 @@ async function setFullscreen(i, on) {
   for (const k of [0, 1]) if (panes[k].page) await drawPage(k);
 }
 
-/* 차트를 넘길 때 미끄러지는 효과. 가던 방향으로 밀어냈다가 새 차트를 반대쪽에서 밀어 넣는다.
+/* 차트 그림이 얹혀 있는 판. 손가락을 따라 이 판을 통째로 옮긴다 */
+const stageOf = i => viewEl(i).querySelector('.chart-stage');
+
+/* 밀려난 만큼 흐려지게 해서 '넘어가는 중'이 손끝으로 느껴지게 한다.
+   끝까지 밀어도 완전히 사라지지는 않게 0.3까지만 흐려진다 */
+const dragOpacity = (x, w) => Math.max(.3, 1 - Math.abs(x) / (w || 1) * .9);
+
+/* 손가락을 따라 차트를 밀어 둔다 (2026-08-04 요청) */
+function paintDrag(i, x) {
+  const stage = stageOf(i);
+  if (!stage) return;
+  stage.style.transform = `translateX(${x}px)`;
+  stage.style.opacity   = String(dragOpacity(x, bodyEl(i).clientWidth));
+}
+
+/* 덜 밀어서 넘어가지 않을 때 — 밀어 둔 자리에서 제자리로 튕겨 돌아온다.
+   인라인 값을 먼저 비워 두면 애니메이션이 끝나는 순간 그대로 제자리에 남는다 */
+function springBack(i, from) {
+  const stage = stageOf(i);
+  if (!stage) return;
+  if (!from || !stage.animate) { stage.style.transform = ''; stage.style.opacity = ''; return; }
+
+  const w = bodyEl(i).clientWidth;
+  stage.animate(
+    [{ transform: `translateX(${from}px)`, opacity: dragOpacity(from, w) },
+     { transform: 'translateX(0)', opacity: 1 }],
+    { duration: 180, easing: 'ease-out' }
+  );
+  stage.style.transform = '';
+  stage.style.opacity   = '';
+}
+
+/* 차트를 넘길 때 미끄러지는 효과. 손가락이 밀어 둔 자리(fromX)에서 이어받아 가던 방향으로 마저
+   밀어내고, 새 차트를 반대쪽에서 밀어 넣는다.
    run() 이 실제로 차트를 여는 일을 맡고, 그 사이 화면은 밀려나간 자리에 그대로 비워 둔다 */
-async function slideSwap(i, dir, run) {
-  const stage = viewEl(i).querySelector('.chart-stage');
+async function slideSwap(i, dir, run, fromX = 0) {
+  const stage = stageOf(i);
   const body  = bodyEl(i);
   // 움직임을 줄여 달라고 설정한 기기에서는 효과 없이 바로 바꾼다
   if (!stage?.animate || matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    if (stage) { stage.style.transform = ''; stage.style.opacity = ''; }
     await run();
     return;
   }
 
-  const d = Math.max(120, body.clientWidth * 0.35);
+  const w      = Math.max(200, body.clientWidth);
+  const outTo  = -dir * w;                        // 손가락이 가던 방향 그대로 화면 밖까지
+  const inFrom = dir * Math.max(120, w * .5);     // 새 차트는 반대쪽에서 들어온다
+  // 남은 거리에 맞춰 시간을 정해야 손가락에서 그대로 이어지는 것처럼 보인다
+  const outMs  = clamp(Math.abs(outTo - fromX) / w * 260, 90, 260);
   body.classList.add('is-sliding');   // 미는 동안 삐져나간 부분이 스크롤로 잡히지 않게 한다
 
   // 끝난 뒤 반드시 직접 붙잡은 것으로 되돌린다. stage.getAnimations()로 훑어서 지우면 안 된다 —
@@ -731,16 +783,16 @@ async function slideSwap(i, dir, run) {
   try {
     // 새 차트를 그리는 동안 가운데에 다시 나타나지 않도록 밀려난 자리에 세워 둔다
     out = stage.animate(
-      [{ transform: 'translateX(0)', opacity: 1 },
-       { transform: `translateX(${-dir * d}px)`, opacity: 0 }],
-      { duration: 150, easing: 'ease-in', fill: 'forwards' }
+      [{ transform: `translateX(${fromX}px)`, opacity: dragOpacity(fromX, w) },
+       { transform: `translateX(${outTo}px)`, opacity: 0 }],
+      { duration: outMs, easing: 'ease-out', fill: 'forwards' }
     );
     await out.finished;
 
     await run();
 
     back = stage.animate(
-      [{ transform: `translateX(${dir * d}px)`, opacity: 0 },
+      [{ transform: `translateX(${inFrom}px)`, opacity: 0 },
        { transform: 'translateX(0)', opacity: 1 }],
       { duration: 190, easing: 'ease-out' }
     );
@@ -754,18 +806,22 @@ async function slideSwap(i, dir, run) {
   }
 }
 
-/* 같은 공항의 차트 목록(전체 종류, CHARTS의 정렬 순서 그대로) 안에서 이전·다음으로 넘어간다.
-   dir 은 -1(이전) 또는 1(다음) */
-let stepping = false;   // 넘어가는 도중에 손짓이 겹쳐 들어와 두 장씩 건너뛰는 것을 막는다
-
-async function stepChart(i, dir) {
-  if (stepping) return;
+/* 같은 공항의 차트 목록(전체 종류, CHARTS의 정렬 순서 그대로)에서 옆에 있는 차트.
+   dir 은 -1(이전) 또는 1(다음). 맨 처음·맨 끝이면 없다 */
+function siblingChart(i, dir) {
   const chart = CHARTS.find(c => c.file === panes[i].file);
-  if (!chart) return;
+  if (!chart) return null;
   const siblings = CHARTS.filter(c => c.icao === chart.icao);
   const idx = siblings.findIndex(c => c.file === chart.file);
-  const next = siblings[idx + dir];
-  if (!next) return;               // 맨 처음·맨 끝이면 그냥 둔다
+  return siblings[idx + dir] || null;
+}
+
+let stepping = false;   // 넘어가는 도중에 손짓이 겹쳐 들어와 두 장씩 건너뛰는 것을 막는다
+
+async function stepChart(i, dir, fromX = 0) {
+  if (stepping) { springBack(i, fromX); return; }
+  const next = siblingChart(i, dir);
+  if (!next) { springBack(i, fromX); return; }
 
   if (state.split && state.activePane !== i) {
     state.activePane = i;
@@ -773,7 +829,7 @@ async function stepChart(i, dir) {
   }
   stepping = true;
   try {
-    await slideSwap(i, dir, () => openChart(next.file));
+    await slideSwap(i, dir, () => openChart(next.file), fromX);
   } finally {
     stepping = false;
   }
@@ -781,21 +837,58 @@ async function stepChart(i, dir) {
 
 /* 차트가 화면 맞춤(100%) 배율일 때는 가로로 넘칠 내용이 없어 좌우 스와이프가 그냥 버려지므로,
    그 손짓을 이전·다음 차트 넘기기로 대신 쓴다. 확대돼 있으면(스크롤이 필요하면) 평소처럼 스와이프로
-   화면을 옮긴다 (2026-08-02 요청) */
+   화면을 옮긴다 (2026-08-02 요청).
+   미는 동안 차트가 손가락을 그대로 따라오고, 충분히 밀었으면 마저 밀려나가며 다음 장이 나온다.
+   덜 밀었으면 제자리로 돌아온다 (2026-08-04 요청) */
 function attachChartSwipe(i) {
   const body = bodyEl(i);
   const MIN_X = 50;      // 이만큼은 옆으로 그어야 넘긴다
   const MIN_Y = 60;      // 이만큼은 위아래로 그어야 전체 화면이 바뀐다
-  let sx = 0, sy = 0, watching = false, deadLeft = false;
+  const LOCK  = 8;       // 이만큼 움직인 시점에 가로 손짓인지 세로 손짓인지 정한다
+  let sx = 0, sy = 0, st = 0, watching = false, deadLeft = false;
+  let axis = '', dragX = 0;
+
+  // 끌던 도중에 손가락이 하나 더 얹히거나(두 손가락 확대) 손짓이 취소되면 밀어 둔 것을 되돌린다
+  const abortDrag = () => {
+    if (axis !== 'x') return;
+    axis = '';
+    body.classList.remove('is-sliding');
+    springBack(i, dragX);
+    dragX = 0;
+  };
 
   body.addEventListener('touchstart', e => {
     const p = panes[i];
-    watching = e.touches.length === 1 && !!p.page && p.zoom === 1;
+    if (!stepping) abortDrag();
+    watching = e.touches.length === 1 && !!p.page && p.zoom === 1 && !stepping;
+    axis = '';
+    dragX = 0;
     if (!watching) return;
     sx = e.touches[0].clientX;
     sy = e.touches[0].clientY;
+    st = performance.now();
     deadLeft = sx <= SWIPE_DEAD_LEFT;
   }, { passive: true });
+
+  // 손가락을 막으려면(가로로 밀 때 화면이 같이 흔들리지 않게) passive 가 아니어야 한다
+  body.addEventListener('touchmove', e => {
+    if (!watching || e.touches.length !== 1) return;
+    const dx = e.touches[0].clientX - sx;
+    const dy = e.touches[0].clientY - sy;
+
+    if (!axis) {
+      if (Math.max(Math.abs(dx), Math.abs(dy)) < LOCK) return;
+      // 왼쪽 가장자리에서 시작한 가로 쓸기는 '목록 열기' 몫이라 아예 붙잡지 않는다
+      axis = Math.abs(dx) <= Math.abs(dy) ? 'y' : (deadLeft ? 'dead' : 'x');
+      if (axis === 'x') body.classList.add('is-sliding');
+    }
+    if (axis !== 'x') return;
+
+    // 넘어갈 차트가 없는 쪽으로는 조금만 끌리다 만다 ("여기가 끝"이라는 손맛)
+    dragX = siblingChart(i, dx < 0 ? 1 : -1) ? dx : dx * .25;
+    paintDrag(i, dragX);
+    e.preventDefault();
+  }, { passive: false });
 
   body.addEventListener('touchend', e => {
     if (!watching) return;
@@ -804,19 +897,22 @@ function attachChartSwipe(i) {
     const dx = t.clientX - sx;
     const dy = t.clientY - sy;
 
-    // 위아래로 그은 것 — 위로 쓸면 전체 화면, 아래로 쓸면 전체 화면 나가기 (2026-08-03 요청).
-    // 목록 열기는 가로 쓸기만 보므로, 왼쪽 가장자리에서 시작해도 그대로 받는다
-    if (Math.abs(dy) >= MIN_Y && Math.abs(dy) > Math.abs(dx) * 1.2) {
-      setFullscreen(i, dy < 0);
+    if (axis === 'x') {
+      body.classList.remove('is-sliding');
+      // 천천히 많이 밀었거나, 빠르게 튕겼으면 넘긴다
+      const fast = Math.abs(dx) / Math.max(1, performance.now() - st) > .5;
+      const far  = Math.abs(dx) >= Math.min(110, Math.max(MIN_X, body.clientWidth * .22));
+      if ((far || fast) && Math.abs(dx) >= MIN_X) stepChart(i, dx < 0 ? 1 : -1, dragX);
+      else springBack(i, dragX);
       return;
     }
 
-    // 왼쪽 가장자리는 '목록 열기' 몫이라 차트 넘기기로 쓰지 않는다 (전체 화면에서도 마찬가지다 —
-    // 전체 화면에서도 목록을 열 수 있게 되면서 다시 부딪히게 됐다)
-    if (deadLeft) return;
-    if (Math.abs(dx) < MIN_X || Math.abs(dx) < Math.abs(dy) * 1.2) return;
-    stepChart(i, dx < 0 ? 1 : -1);
+    // 위아래로 그은 것 — 위로 쓸면 전체 화면, 아래로 쓸면 전체 화면 나가기 (2026-08-03 요청).
+    // 목록 열기는 가로 쓸기만 보므로, 왼쪽 가장자리에서 시작해도 그대로 받는다
+    if (Math.abs(dy) >= MIN_Y && Math.abs(dy) > Math.abs(dx) * 1.2) setFullscreen(i, dy < 0);
   }, { passive: true });
+
+  body.addEventListener('touchcancel', () => { watching = false; abortDrag(); }, { passive: true });
 }
 
 /* ── 8. 확대 · 축소 ───────────────────────────────────────────── */
@@ -1024,13 +1120,20 @@ async function refreshLibrary() {
 
 /* ── 10. 화면 연결 ────────────────────────────────────────────── */
 $('#search').addEventListener('input', e => {
-  state.query = e.target.value.trim();
+  const q = e.target.value.trim();
+  const wasEmpty = !state.query;
+  state.query = q;
   renderAll();
+  // 자리 잡아 주는 것은 검색을 막 시작한 순간 한 번뿐이다.
+  // 한 글자 칠 때마다 하면 사용자가 직접 펴 둔 목록이 자꾸 접히고 스크롤이 튄다
+  if (q && wasEmpty) focusChartsSection();
+  else if (!q) unfocusChartsSection();
 });
 $('#btn-search-clear').addEventListener('click', () => {
   $('#search').value = '';
   state.query = '';
   renderAll();
+  unfocusChartsSection();
   $('#search').focus();
 });
 

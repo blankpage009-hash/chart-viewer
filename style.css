@@ -109,9 +109,12 @@ button { font-family: inherit; cursor: pointer; }
   border: 0;
   background: none;
   cursor: pointer;
+  /* 로고를 화면 왼쪽에 최대한 붙인다 — 상단 바의 gap(10px) 중 절반 이상을 도로 당겨 온다
+     (2026-08-04 요청. ☰ 버튼도 아래에서 바탕을 없애고 폭을 줄여 자리를 내줬다) */
+  margin-left: -7px;
 }
 .brand {
-  height: 32px;
+  height: 29px;
   width: auto;
   display: block;
   /* 로고 원본은 흰 바탕에 검은 글자다. 색을 반전(검은 글자→흰 글자, 흰 바탕→검은 바탕)한 뒤
@@ -136,10 +139,16 @@ button { font-family: inherit; cursor: pointer; }
 }
 .icon-btn svg { display: block; }
 .icon-btn:hover  { background: rgba(255,255,255,.22); }
+/* 목록 여는 ☰ 버튼은 네모 바탕 없이 선 세 개만 보인다 (2026-08-04 요청).
+   바탕이 없어진 만큼 폭도 줄여, 그만큼 로고를 왼쪽으로 더 붙인다 */
+#btn-sidebar { min-width: 26px; background: transparent; margin-left: -6px; }
+#btn-sidebar:hover { background: transparent; color: rgba(255,255,255,.65); }
 .icon-btn.is-on  { background: var(--accent); }
 .icon-btn.small  { min-width: 30px; height: 30px; font-size: 15px;
                    background: transparent; color: var(--text-dim); }
-.icon-btn.small svg { width: 14px; height: 14px; }
+/* 회전·전체보기·압정 아이콘만 조금 키운다 (2026-08-04 요청).
+   버튼 칸 크기(30px)는 그대로 둬서 .viewer-bar 높이 34px 이 늘어나지 않게 했다 */
+.icon-btn.small svg { width: 17px; height: 17px; }
 .icon-btn.small:hover { background: var(--btn-hover); color: var(--text); }
 .icon-btn.small.is-fav { color: var(--star); }
 
@@ -551,6 +560,8 @@ input::placeholder { color: var(--text-dim); }
 /* .icon-btn.small 의 font-size(15px)보다 "100%" 글자를 따로 조금 더 줄인다.
    세 클래스짜리 선택자로 우선순위를 높여야 이긴다 */
 .icon-btn.small.zoom-label { font-size: 13px; }
+/* 닫기(×)는 그림이 아니라 글자라서, 옆의 아이콘들을 키우면 혼자 작아 보인다 — 같이 키운다 */
+.viewer-bar .icon-btn.small[data-act="close"] { font-size: 19px; }
 
 /* 확대하면 캔버스가 칸보다 커지므로 손가락(또는 스크롤)으로 밀어서 본다.
    safe center = 커졌을 때 위/왼쪽이 잘려 못 보게 되는 것을 막아준다 */
