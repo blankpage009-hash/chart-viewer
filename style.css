@@ -786,10 +786,22 @@ input::placeholder { color: var(--text-dim); }
 
 /* ── AI 해석 창 ───────────────────────────── */
 .ai-modal { width: 620px; }
+/* 팝업 제목 — 「ICAO · 종류 : 이름 (번호)」 */
 .ai-chart-name {
-  margin: 0; padding: 12px 18px 0;
-  font-size: 13px; font-weight: 700; color: var(--accent);
+  display: flex; flex-wrap: wrap; align-items: center; gap: 7px;
+  margin: 0 18px; padding: 12px 0 10px;
+  border-bottom: 2px solid var(--accent);
+  font-size: 14.5px; line-height: 1.4;
 }
+.ai-chart-name .ai-icao {
+  /* 차트 그림이 테마와 상관없이 흰 종이인 것과 같은 이유로 색을 고정한다 */
+  padding: 2px 7px; border-radius: 5px;
+  background: #fff; color: #14304f;
+  font-size: 12px; font-weight: 800; letter-spacing: .5px;
+}
+.ai-chart-name b { color: var(--accent); }
+.ai-chart-name .ai-title-text { flex: 1 1 auto; min-width: 0; font-weight: 700; }
+.ai-chart-name .ai-no { font-size: 12.5px; color: var(--text-dim); }
 .ai-body {
   flex: 1 1 auto; min-height: 120px;
   overflow-y: auto;
@@ -803,37 +815,60 @@ input::placeholder { color: var(--text-dim); }
 }
 .ai-body .ai-error b { color: #d0483f; }
 
-/* 해석은 표로 보여 준다. 줄마다 구분선이 있어야 비행 중에 눈으로 훑기 쉽다 */
-.ai-table { width: 100%; border-collapse: collapse; }
-.ai-table td {
-  /* 왼쪽 여백은 글머리 기호 자리 */
-  padding: 8px 18px 8px 34px;
-  border-bottom: 1px solid var(--row-line);
+/* 해석은 「라벨 | 내용」 두 칸짜리 카드 표로 보여 준다.
+   줄마다 구분선이 있어야 비행 중에 눈으로 훑기 쉽다 */
+.ai-table {
+  width: calc(100% - 36px);
+  margin: 14px 18px 0;
+  border-collapse: separate; border-spacing: 0;
+  border: 1px solid var(--line); border-radius: 10px;
+  overflow: hidden;                 /* 둥근 모서리 밖으로 머리 띠가 삐져나오지 않게 */
+  table-layout: fixed;
+}
+.ai-table th, .ai-table td {
+  padding: 9px 12px;
   text-align: left; vertical-align: top;
-  line-height: 1.5;
-  position: relative;
+  line-height: 1.55;
+  word-break: break-word;
 }
-/* 글머리 기호는 글자(•)로 넣으면 기기마다 크기가 달라 보여서 작은 동그라미로 직접 그린다 */
-.ai-table td::before {
-  content: '';
-  position: absolute;
-  left: 20px; top: 15px;
-  width: 5px; height: 5px;
-  border-radius: 50%;
-  background: var(--accent);
-}
-/* 묶음 제목은 띠로 구분한다 */
-.ai-table .ai-sec th {
-  padding: 7px 18px;
-  border-top: 1px solid var(--line);
-  border-bottom: 1px solid var(--line);
+/* 표 머리 띠 */
+.ai-table .ai-head th {
   background: var(--head-bg);
   color: var(--accent);
-  text-align: left;
   font-size: 12px; font-weight: 700; letter-spacing: .3px;
 }
-/* 맨 윗줄은 차트 이름 바로 아래라 위쪽 선이 겹쳐 보인다 */
-.ai-table tr:first-child th { border-top: 0; }
+/* 칸 폭은 맨 윗줄(표 머리)에서 정해진다 — table-layout: fixed 라서 아랫줄에 적으면 안 먹는다 */
+.ai-table th:first-child { width: 118px; }
+/* 왼쪽 라벨 칸 */
+.ai-table tr:not(.ai-head) th {
+  border-top: 1px solid var(--row-line);
+  font-size: 12.5px; font-weight: 700;
+}
+.ai-table tr:not(.ai-head) td {
+  border-top: 1px solid var(--row-line);
+  font-size: 13.5px;
+}
+/* 한 칸에 여러 줄이 들어가는 경우 (절차 순서 등) */
+.ai-table .ai-ln, .ai-table .ai-li { display: block; }
+.ai-table .ai-ln + .ai-ln, .ai-table .ai-li + .ai-li, .ai-table .ai-ln + .ai-li { margin-top: 3px; }
+/* 번호·기호는 왼쪽에 따로 세워서 둘째 줄이 글자 아래로 들어가지 않게 한다 */
+.ai-table .ai-li { padding-left: 17px; position: relative; }
+.ai-table .ai-li > i {
+  position: absolute; left: 0; top: 0;
+  font-style: normal; font-weight: 700; color: var(--accent);
+}
+/* 고도·주파수·속도는 눈으로 바로 찾아야 하므로 따로 띄운다 */
+.ai-table em {
+  font-style: normal; font-weight: 700; color: var(--accent);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: .95em;
+}
+/* 아이패드 세로처럼 폭이 좁으면 라벨 칸을 줄인다 */
+@media (max-width: 620px) {
+  .ai-table th:first-child { width: 92px; }
+  .ai-table tr:not(.ai-head) th { font-size: 12px; }
+  .ai-table th, .ai-table td { padding: 8px 9px; }
+}
 .ai-foot { display: flex; align-items: center; gap: 10px; }
 .ai-disclaimer { flex: 1 1 auto; text-align: left; font-size: 11.5px; color: var(--text-dim); }
 .ai-foot .text-btn { background: var(--chip-bg); color: var(--text); }

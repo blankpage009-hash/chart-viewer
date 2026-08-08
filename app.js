@@ -1059,44 +1059,74 @@ const GEMINI_URL =
 let aiCurrent = null;
 let aiRunning = false;
 
-/* 차트 종류마다 물어보는 내용을 다르게 한다. 그래야 쓸모 있는 답이 온다 */
+/* 차트 종류를 사람이 읽는 말로 (팝업 제목과 지시 문구에 함께 쓴다) */
+const TYPE_LABEL = {
+  SID: '출발 절차', STAR: '도착 절차', APP: '접근 절차',
+  TAXI: '공항 지상도', ETC: '기타 차트'
+};
+
+/* 차트 종류마다 어떤 표를 만들지 정해 준다. 이게 있어야 매번 같은 모양으로 나온다 */
 function aiPrompt(chart) {
   const byType = {
-    SID:  '이 차트는 출발 절차(SID)입니다. 경로를 지나는 순서대로, 각 지점의 고도 제한과 속도 제한을 짚어 주세요.',
-    STAR: '이 차트는 도착 절차(STAR)입니다. 경로를 지나는 순서대로, 각 지점의 고도 제한과 속도 제한을 짚어 주세요.',
-    APP:  '이 차트는 접근 절차(APP)입니다. 접근 방식과 활주로, 무선 주파수, 최종 접근 고도와 최저 고도(minimums), ' +
-          '그리고 복행(missed approach) 절차를 반드시 포함해 주세요.',
-    TAXI: '이 차트는 공항 지상도(TAXI)입니다. 활주로와 주요 유도로 배치, 주기장 위치, ' +
-          '주의해야 할 구역(활주로 침입 위험 지점 등)을 짚어 주세요.'
+    SID: [
+      '**항목 | 운영 및 고도 제한 사항**',
+      '기본 제원 | 적용 활주로, 전이 고도(Trans Alt)',
+      '상승 구배 | 요구 구배와 그 이유 (없으면 줄 생략)',
+      '핵심 경로 및 고도 제한 | 경로를 순서대로. 여러 개면 줄을 나눠 쓴다',
+      '운영 시간 | 사용 제한·인가 요건 (없으면 줄 생략)'
+    ],
+    STAR: [
+      '**항목 | 비행 절차 및 제한 사항**',
+      '적용 활주로 | 어느 활주로용인지',
+      '비행 조건 | RNAV 등급, 필요 장비, 관제 요건',
+      '고도 기준 | 전이 고도(Trans Level)',
+      '주요 경로 요약 | 합류 지점(IAF)과 주요 지점의 고도·속도 제한',
+      '체공 (Holding) | 위치, 선회 방향, Inbound 코스, 제한'
+    ],
+    APP: [
+      '**요소 | 제원 및 상세 절차**',
+      '로컬라이저 (LOC) | 식별부호 / 주파수 / 최종 접근 코스',
+      '고도 제한 | FAF(최종접근픽스) 고도, DA/MDA(결심고도)를 줄을 나눠 쓴다',
+      '실패접근 (Missed) | 순서가 있으므로 1. 2. 3. 으로 번호를 붙여 줄을 나눈다',
+      '특이사항 | 선회접근 가부, 장비 요건, 비행 금지 구역 등'
+    ],
+    TAXI: [
+      '**구분 | 상세 제원**',
+      '활주로 (RWY) | 활주로 번호와 길이',
+      '주요 유도로 | 이동 경로에서 중요한 유도로',
+      '주기장 | 주기장 구역 배치',
+      '주의 구역 | 활주로 침입 위험 지점, 통행 제한 구역'
+    ]
   };
+  const plan = byType[chart.type] || [
+    '**항목 | 내용**',
+    '차트 종류 | 이 차트가 무엇인지',
+    '주요 정보 | 비행에 필요한 핵심 항목을 줄을 나눠 쓴다'
+  ];
+
   return [
     '너는 젭슨(Jeppesen) 항공 차트를 읽어 주는 조종사 도우미다.',
-    '첨부한 차트 이미지를 읽고 한국어로 정리해라. 마이크로소프트 플라이트 시뮬레이터 비행 준비에 쓸 것이다.',
-    byType[chart.type] || '이 차트의 종류와 용도를 먼저 밝히고, 담긴 주요 정보를 정리해 주세요.',
+    '첨부한 차트 이미지를 읽고 한국어 요약표로 정리해라. 마이크로소프트 플라이트 시뮬레이터 비행 준비에 쓸 것이다.',
+    `이 차트는 ${TYPE_LABEL[chart.type] || '항공 차트'}(${chart.type})다.`,
     '',
     '출력 형식 — 반드시 이대로만 쓴다:',
-    '- 묶음의 제목은 **제목** 처럼 별표 두 개로 감싼 줄 하나로 쓴다. 제목은 2~6글자.',
-    '- 제목 아래의 모든 줄은 한 줄에 한 가지씩, 40자 이내로 짧게 쓴다.',
-    '- 한 줄은 하나의 항목이다. 여러 내용을 한 줄에 몰아 쓰지 마라.',
-    '- 줄글로 설명하지 마라. 조사와 서술어를 빼고 핵심만 적는다.',
-    '- 목록 기호(-, •), 번호, 표 기호는 네가 직접 넣지 마라. 앱이 알아서 붙인다.',
+    '- 표의 머리줄은 **왼쪽칸 | 오른쪽칸** 처럼 별표 두 개로 감싼다.',
+    '- 나머지 줄은 「라벨 | 내용」 형식으로 쓴다. 세로줄(|)은 한 줄에 하나만.',
+    '- 라벨은 짧게. 항공 용어는 「한글 (영문)」으로 병기한다. 예: 활주로 (RWY)',
+    '- 한 칸에 여러 가지를 넣어야 하면 세로줄 없는 줄을 이어서 쓴다. 그 줄은 윗줄에 이어 붙는다.',
+    '- 순서가 있는 절차는 그 이어지는 줄에 1. 2. 3. 으로 번호를 붙인다.',
+    '- 표를 나누고 싶으면 **머리줄**을 새로 쓰면 된다.',
     '',
     '내용 규칙:',
-    '- 비행에 꼭 필요한 것만. 전체 14줄을 넘기지 마라.',
+    '- 비행에 꼭 필요한 것만. 한 줄은 40자 이내, 전체 20줄을 넘기지 마라.',
+    '- 줄글로 설명하지 마라. 조사와 서술어를 빼고 항목만 적는다.',
     '- 차트에 없는 항목은 줄 자체를 쓰지 마라. 억지로 채우지 마라.',
     '- 차트에 적혀 있는 숫자만 쓴다. 흐려서 못 읽으면 "확인 필요"라고 적는다.',
     '  절대로 지어내지 마라.',
-    '- 고도·주파수·활주로 번호는 원문 그대로 적는다.',
+    '- 고도·주파수·코스·속도는 단위까지 원문 그대로 적는다. (예: 2000 ft, 110.7 MHz, 324°, 250 KT)',
     '',
-    '예시:',
-    '**접근**',
-    '활주로 32R, ILS 또는 LOC',
-    'LOC 주파수 110.30 (GMP)',
-    '최종 접근 코스 322°',
-    '**최저 고도**',
-    'ILS 480ft (지표 420ft)',
-    '**복행**',
-    '3000ft까지 상승 후 GMP VOR 대기'
+    '이 차트는 아래 표 구성으로 만들어라. 차트에 없는 줄은 빼고, 필요하면 줄을 더해도 된다:',
+    ...plan
   ].join('\n');
 }
 
@@ -1171,23 +1201,66 @@ async function askGemini(chart, imageB64) {
   return text.trim();
 }
 
-/* 받은 글을 표로 그린다. **제목** 줄은 띠로, 나머지 줄은 글머리 기호(•)가 붙은 한 줄 항목으로.
-   줄 사이 구분선은 CSS가 그린다 */
+/* 고도·주파수·코스·속도처럼 눈으로 바로 찾아야 하는 숫자를 파란 글씨로 띄운다.
+   앞자리에 영문·숫자가 붙어 있으면 건드리지 않는다 — 'D13.0' 같은 지점 이름의 숫자만
+   따로 떨어져 보이는 것을 막기 위함. (뒤돌아보기 문법은 옛 사파리에서 앱 전체가 멈추므로 안 쓴다) */
+const AI_NUM_RE =
+  /(^|[^A-Za-z\d.])((?:FL\s?\d{2,3}|\d[\d,]*(?:\.\d+)?\s?(?:ft|FT|m\b|MHz|KT|kt|kts|NM|nm|%|°)|\d{2,3}\.\d{1,3}))/g;
+
+function aiNums(html) {
+  return html.replace(AI_NUM_RE, '$1<em>$2</em>');
+}
+
+/* 값 한 줄. 「1. 2. 3.」이나 목록 기호로 시작하면 번호·기호를 왼쪽에 따로 세운다 */
+function aiValueLine(s) {
+  const m = s.match(/^([-•*·]|\d+[.)])\s+(.*)$/);
+  if (!m) return `<span class="ai-ln">${aiNums(esc(s))}</span>`;
+  const mark = /\d/.test(m[1]) ? m[1] : '•';
+  return `<span class="ai-li"><i>${esc(mark)}</i>${aiNums(esc(m[2]))}</span>`;
+}
+
+/* 받은 글을 표로 그린다.
+   **왼쪽 | 오른쪽** = 새 표의 머리줄 / 「라벨 | 내용」 = 한 줄 / 세로줄 없는 줄 = 윗줄에 이어 붙임 */
 function aiToHtml(text) {
-  const rows = [];
+  const cards = [];
+  let card = null;
+
   for (const raw of String(text).split('\n')) {
-    // AI가 목록 기호(-, •, 1.)나 세로줄을 붙여 왔으면 떼어 낸다. 기호는 앱이 직접 붙인다
-    const line = raw.trim()
-      .replace(/^[-•*·]\s+/, '')
-      .replace(/^\d+[.)]\s+/, '')
-      .replace(/\s*\|\s*/g, ' ');
+    const line = raw.trim();
     if (!line) continue;
 
     const head = line.match(/^\*\*(.+?)\*\*:?$/);
-    if (head) rows.push(`<tr class="ai-sec"><th>${esc(head[1].trim())}</th></tr>`);
-    else      rows.push(`<tr><td>${esc(line.replace(/\*\*/g, ''))}</td></tr>`);
+    if (head) {
+      const parts = head[1].split('|');
+      card = { head: [parts[0].trim(), (parts[1] || '내용').trim()], rows: [] };
+      cards.push(card);
+      continue;
+    }
+
+    // 머리줄 없이 바로 내용이 온 경우에도 표가 되도록 기본 머리줄을 만들어 둔다
+    if (!card) { card = { head: ['항목', '내용'], rows: [] }; cards.push(card); }
+
+    const cut = line.indexOf('|');
+    if (cut > 0) {
+      card.rows.push({
+        label: line.slice(0, cut).replace(/\*\*/g, '').trim(),
+        lines: [line.slice(cut + 1).replace(/\*\*/g, '').trim()]
+      });
+    } else if (card.rows.length) {
+      card.rows[card.rows.length - 1].lines.push(line.replace(/\*\*/g, ''));
+    } else {
+      card.rows.push({ label: '', lines: [line.replace(/\*\*/g, '')] });
+    }
   }
-  return rows.length ? `<table class="ai-table">${rows.join('')}</table>` : esc(text);
+
+  const html = cards.filter(c => c.rows.length).map(c => `
+    <table class="ai-table">
+      <tr class="ai-head"><th>${esc(c.head[0])}</th><th>${esc(c.head[1])}</th></tr>
+      ${c.rows.map(r => `<tr><th>${esc(r.label)}</th>` +
+                        `<td>${r.lines.filter(Boolean).map(aiValueLine).join('')}</td></tr>`).join('')}
+    </table>`).join('');
+
+  return html || esc(text);
 }
 
 function showAiText(html, cls) {
@@ -1206,7 +1279,12 @@ async function openAiPanel(force = false) {
   if (!p.file || !p.page || !chart) { toast('먼저 차트를 여세요.'); return; }
 
   aiCurrent = { file: p.file, pane: state.activePane };
-  $('#ai-chart-name').textContent = `${chart.icao} ${chart.no} ${chart.title}`;
+  // 제목은 「ICAO · 종류 : 차트 이름 (번호)」 — 어느 차트의 요약인지 한눈에 보이게
+  $('#ai-chart-name').innerHTML =
+    `<span class="ai-icao">${esc(chart.icao)}</span>` +
+    `<b>${esc(TYPE_LABEL[chart.type] || chart.rawType || '차트')}</b>` +
+    `<span class="ai-title-text">${esc(chart.title)}</span>` +
+    (chart.no ? `<span class="ai-no">(${esc(chart.no)})</span>` : '');
   $('#ai-modal').hidden = false;
 
   const saved = aiNotes[p.file];
