@@ -150,6 +150,8 @@ const KEY_APT = 'ncv.airports';
 const KEY_APT_FAV = 'ncv.favAirports';
 const KEY_ROT = 'ncv.rotations';
 const KEY_THEME = 'ncv.theme';
+const KEY_AI_KEY = 'ncv.aiKey';       // 제미나이 열쇠. 이 기기 밖으로 나가지 않는다
+const KEY_AI_NOTES = 'ncv.aiNotes';   // 차트별 해석 글 (한 번 받아두면 인터넷 없이 다시 본다)
 
 function load(key, fallback) {
   try { return JSON.parse(localStorage.getItem(key)) ?? fallback; }
@@ -166,6 +168,8 @@ let favAirports = load(KEY_APT_FAV, []);
 let rotations   = load(KEY_ROT, {});
 /* 화면 색. 'light' 또는 'dark' (index.html 머리말에서 이미 한 번 적용해 둔다) */
 let theme       = load(KEY_THEME, 'light') === 'dark' ? 'dark' : 'light';
+let aiKey       = load(KEY_AI_KEY, '');
+let aiNotes     = load(KEY_AI_NOTES, {});
 
 function applyTheme(next) {
   theme = next === 'dark' ? 'dark' : 'light';
@@ -473,6 +477,11 @@ function updateBar(i) {
   const favBtn = view.querySelector('[data-act="fav"]');
   favBtn.classList.toggle('is-fav', !!isFav);
   favBtn.innerHTML = pinIcon();
+
+  // 이미 해석해 둔 차트는 전구에 불이 들어와 있어, 인터넷 없이도 열린다는 걸 알 수 있다
+  const aiBtn = view.querySelector('[data-act="ai"]');
+  aiBtn.classList.toggle('is-on', !!(p.file && aiNotes[p.file]));
+  aiBtn.title = p.file && aiNotes[p.file] ? 'AI 해석 보기 (저장됨)' : 'AI 차트 해석';
 
   const fsBtn = view.querySelector('[data-act="fullscreen"]');
   fsBtn.classList.toggle('is-on', state.fullscreen);
@@ -997,11 +1006,13 @@ async function removeCharts(files) {
   for (const file of files) {
     await deleteFile(file);
     delete rotations[file];
+    delete aiNotes[file];          // 없는 차트의 해석이 남아 자리를 차지하지 않게
     panes.forEach((p, i) => { if (p.file === file) closePane(i); });
   }
   favorites = favorites.filter(f => !files.includes(f));
   save(KEY_FAV, favorites);
   save(KEY_ROT, rotations);
+  save(KEY_AI_NOTES, aiNotes);
   selectedFiles.clear();
 
   busy(null);
@@ -1034,6 +1045,181 @@ async function refreshLibrary() {
   // 설정 창을 열어 둔 채로 차트가 늘거나 줄면 그 안의 두 목록도 같이 맞춰 준다.
   // (renderAll 이 아니라 여기서 하는 이유: 이름을 한 글자 칠 때마다 다시 그리면 입력 칸이 풀린다)
   if (!$('#settings-modal').hidden) { renderAirportTable(); renderFileTable(); }
+}
+
+/* ── 9-1. AI 차트 해석 (구글 제미나이) ────────────────────────────
+   차트 그림을 그대로 보내서 한국어 설명을 받아온다.
+   받은 글은 파일 이름별로 저장해 두므로, 같은 차트를 다시 열면 인터넷 없이 바로 보이고
+   요금도 다시 나가지 않는다. */
+const GEMINI_MODEL = 'gemini-3.6-flash';
+const GEMINI_URL =
+  `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+
+/* 지금 해석 창에 띄워 둔 차트 (다시 해석 버튼이 어느 차트를 가리키는지) */
+let aiCurrent = null;
+let aiRunning = false;
+
+/* 차트 종류마다 물어보는 내용을 다르게 한다. 그래야 쓸모 있는 답이 온다 */
+function aiPrompt(chart) {
+  const byType = {
+    SID:  '이 차트는 출발 절차(SID)입니다. 경로를 지나는 순서대로, 각 지점의 고도 제한과 속도 제한을 짚어 주세요.',
+    STAR: '이 차트는 도착 절차(STAR)입니다. 경로를 지나는 순서대로, 각 지점의 고도 제한과 속도 제한을 짚어 주세요.',
+    APP:  '이 차트는 접근 절차(APP)입니다. 접근 방식과 활주로, 무선 주파수, 최종 접근 고도와 최저 고도(minimums), ' +
+          '그리고 복행(missed approach) 절차를 반드시 포함해 주세요.',
+    TAXI: '이 차트는 공항 지상도(TAXI)입니다. 활주로와 주요 유도로 배치, 주기장 위치, ' +
+          '주의해야 할 구역(활주로 침입 위험 지점 등)을 짚어 주세요.'
+  };
+  return [
+    '너는 젭슨(Jeppesen) 항공 차트를 읽어 주는 조종사 도우미다.',
+    '첨부한 차트 이미지를 읽고 한국어로 설명해라. 마이크로소프트 플라이트 시뮬레이터 비행 준비에 쓸 것이다.',
+    byType[chart.type] || '이 차트의 종류와 용도를 먼저 밝히고, 담긴 주요 정보를 정리해 주세요.',
+    '',
+    '규칙:',
+    '- 소제목은 **소제목** 처럼 별표 두 개로 감싸라. 그 밖의 표나 기호는 쓰지 마라.',
+    '- 차트에 적혀 있는 숫자만 말해라. 안 보이거나 흐려서 못 읽으면 "차트에서 확인 필요"라고 적어라.',
+    '  절대로 지어내지 마라.',
+    '- 고도·주파수·활주로 번호 같은 숫자는 원문 그대로 적어라.',
+    '- 전체 12줄 안팎으로 간결하게.'
+  ].join('\n');
+}
+
+/* 화면에 보이는 캔버스를 그대로 보내면 확대 상태에 따라 잘리거나 흐릴 수 있다.
+   그래서 AI에게 보낼 그림은 항상 같은 크기(긴 변 1600점)로 따로 한 장 그린다 */
+async function renderForAi(p) {
+  const base = p.page.getViewport({ scale: 1, rotation: p.rot });
+
+  // 흰 여백을 잘라내는 계산은 drawPage 와 같다 (내용만 보내야 글자가 크게 잡힌다)
+  let cropX = 0, cropY = 0, cropW = base.width, cropH = base.height;
+  if (p.crop) {
+    const c = p.crop;
+    const pts = [[c.x0, c.y0], [c.x1, c.y0], [c.x1, c.y1], [c.x0, c.y1]]
+      .map(([x, y]) => base.convertToViewportPoint(x, y));
+    const xs = pts.map(q => q[0]);
+    const ys = pts.map(q => q[1]);
+    cropX = Math.max(0, Math.min(...xs));
+    cropY = Math.max(0, Math.min(...ys));
+    cropW = Math.min(base.width  - cropX, Math.max(...xs) - cropX);
+    cropH = Math.min(base.height - cropY, Math.max(...ys) - cropY);
+  }
+
+  const scale = 1600 / Math.max(cropW, cropH);
+  const canvas = document.createElement('canvas');
+  canvas.width  = Math.max(1, Math.round(cropW * scale));
+  canvas.height = Math.max(1, Math.round(cropH * scale));
+
+  const ctx = canvas.getContext('2d', { alpha: false });
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // 화면용 그리기(p.task)와 섞이지 않도록 이 작업은 따로 붙잡아 둔다
+  const task = p.page.render({
+    canvasContext: ctx,
+    viewport: p.page.getViewport({ scale, rotation: p.rot }),
+    transform: [1, 0, 0, 1, -cropX * scale, -cropY * scale]
+  });
+  await task.promise;
+
+  // 앞의 "data:image/jpeg;base64," 는 떼고 알맹이만 보낸다
+  return canvas.toDataURL('image/jpeg', 0.85).split(',')[1];
+}
+
+async function askGemini(chart, imageB64) {
+  const res = await fetch(GEMINI_URL, {
+    method: 'POST',
+    // 열쇠는 주소가 아니라 헤더에 넣는다. 주소에 넣으면 기록에 열쇠가 그대로 남는다
+    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': aiKey },
+    body: JSON.stringify({
+      contents: [{
+        parts: [
+          { text: aiPrompt(chart) },
+          { inline_data: { mime_type: 'image/jpeg', data: imageB64 } }
+        ]
+      }]
+    })
+  });
+
+  if (!res.ok) {
+    const detail = await res.text().catch(() => '');
+    console.warn('제미나이 응답 오류:', res.status, detail);
+    if (res.status === 400 || res.status === 401 || res.status === 403)
+      throw new Error('열쇠가 올바르지 않거나 권한이 없습니다. 설정 → AI 칸에서 다시 확인해 주세요.');
+    if (res.status === 429)
+      throw new Error('오늘 쓸 수 있는 양을 넘었습니다. 잠시 뒤에 다시 시도해 주세요.');
+    throw new Error(`구글 서버가 응답하지 않았습니다. (오류 ${res.status})`);
+  }
+
+  const data = await res.json();
+  const text = data?.candidates?.[0]?.content?.parts?.map(x => x.text).filter(Boolean).join('') || '';
+  if (!text) throw new Error('해석을 받지 못했습니다. 다시 시도해 주세요.');
+  return text.trim();
+}
+
+/* 받은 글에서 **소제목** 만 굵게 살린다. 나머지는 글자 그대로 보여 준다 */
+function aiToHtml(text) {
+  return esc(text).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+}
+
+function showAiText(html, cls) {
+  $('#ai-body').innerHTML = cls ? `<p class="${cls}">${html}</p>` : html;
+}
+
+function setAiRunning(on) {
+  aiRunning = on;
+  $('#btn-ai-again').disabled = on;
+}
+
+/* force = true 면 저장해 둔 해석을 무시하고 새로 물어본다 (다시 해석 버튼) */
+async function openAiPanel(force = false) {
+  const p = panes[state.activePane];
+  const chart = CHARTS.find(c => c.file === p.file);
+  if (!p.file || !p.page || !chart) { toast('먼저 차트를 여세요.'); return; }
+
+  aiCurrent = { file: p.file, pane: state.activePane };
+  $('#ai-chart-name').textContent = `${chart.icao} ${chart.no} ${chart.title}`;
+  $('#ai-modal').hidden = false;
+
+  const saved = aiNotes[p.file];
+  if (saved && !force) { showAiText(aiToHtml(saved)); setAiRunning(false); return; }
+
+  if (!aiKey) {
+    showAiText('AI 열쇠가 아직 없습니다.<br>설정(톱니) → <b>AI</b> 칸에서 구글 제미나이 열쇠를 먼저 넣어 주세요.', 'ai-error');
+    setAiRunning(false);
+    return;
+  }
+  if (navigator.onLine === false) {
+    showAiText('인터넷이 연결되어 있지 않습니다.<br>해석은 인터넷이 있을 때만 받을 수 있습니다. ' +
+               '(이미 해석해 둔 차트는 인터넷 없이도 열립니다)', 'ai-error');
+    setAiRunning(false);
+    return;
+  }
+
+  setAiRunning(true);
+  showAiText('차트를 읽는 중… (10초쯤 걸립니다)', 'ai-wait');
+
+  try {
+    const img = await renderForAi(p);
+    const text = await askGemini(chart, img);
+    // 창을 닫았거나 그새 다른 차트를 열었으면 화면은 건드리지 않고 저장만 한다
+    aiNotes[p.file] = text;
+    save(KEY_AI_NOTES, aiNotes);
+    panes.forEach((_, k) => updateBar(k));      // 전구에 불을 켠다
+    if (aiCurrent?.file === p.file && !$('#ai-modal').hidden) showAiText(aiToHtml(text));
+  } catch (err) {
+    console.error(err);
+    const msg = err instanceof TypeError
+      ? '구글 서버에 연결하지 못했습니다. 인터넷 상태를 확인해 주세요.'
+      : err.message;
+    if (aiCurrent?.file === p.file) showAiText(`<b>해석하지 못했습니다.</b><br>${esc(msg)}`, 'ai-error');
+  } finally {
+    setAiRunning(false);
+  }
+}
+
+function renderAiTab() {
+  $('#ai-key').value = aiKey;
+  const n = Object.keys(aiNotes).length;
+  $('#ai-saved-count').textContent = n ? `저장된 해석 ${n}개` : '저장된 해석이 없습니다';
+  $('#btn-ai-clear').disabled = !n;
 }
 
 /* ── 10. 화면 연결 ────────────────────────────────────────────── */
@@ -1120,6 +1306,7 @@ function resetView() {
   document.body.classList.remove('is-fullscreen');
 
   $('#settings-modal').hidden = true;
+  $('#ai-modal').hidden = true;
   $('#layout').classList.remove('sidebar-hidden');
 
   // 목록 접힘 상태도 index.html 의 처음 모양대로 (Pinboards만 접혀 있다)
@@ -1211,6 +1398,11 @@ $('#viewers').addEventListener('click', async e => {
     case 'prev': await loadPage(i, p.pageNum - 1); return;
     case 'next': await loadPage(i, p.pageNum + 1); return;
     case 'fullscreen': await setFullscreen(i, !state.fullscreen); return;
+    case 'ai':
+      // 나란히보기에서 오른쪽 칸의 아이콘을 눌렀으면 그 칸을 기준으로 해석한다
+      if (state.activePane !== i) { state.activePane = i; panes.forEach((_, k) => updateBar(k)); }
+      await openAiPanel();
+      return;
     case 'fav': {
       if (!p.file) return;
       const at = favorites.indexOf(p.file);
@@ -1364,6 +1556,7 @@ function openSettings(tab = 'airport') {
   renderAirportTable();
   renderFileTable();
   renderThemeTab();
+  renderAiTab();
   showTab(tab);
   $('#settings-modal').hidden = false;
 }
@@ -1381,6 +1574,30 @@ $('#settings-modal').addEventListener('click', e => {
   if (e.target.id === 'settings-modal' || e.target.closest('[data-close-modal]'))
     $('#settings-modal').hidden = true;
 });
+
+/* 설정 창 — AI 칸 (열쇠 넣기 · 저장된 해석 지우기) */
+$('#ai-key').addEventListener('input', e => {
+  aiKey = e.target.value.trim();
+  save(KEY_AI_KEY, aiKey);
+});
+
+$('#btn-ai-clear').addEventListener('click', () => {
+  const n = Object.keys(aiNotes).length;
+  if (!n) return;
+  if (!confirm(`저장해 둔 해석 ${n}개를 모두 지웁니다.\n다시 보려면 인터넷에 연결해 새로 받아야 합니다.`)) return;
+  aiNotes = {};
+  save(KEY_AI_NOTES, aiNotes);
+  renderAiTab();
+  panes.forEach((_, k) => updateBar(k));
+  toast('저장된 해석을 모두 지웠습니다.');
+});
+
+/* AI 해석 창 */
+$('#ai-modal').addEventListener('click', e => {
+  if (e.target.id === 'ai-modal' || e.target.closest('[data-close-ai]'))
+    $('#ai-modal').hidden = true;
+});
+$('#btn-ai-again').addEventListener('click', () => { if (!aiRunning) openAiPanel(true); });
 
 /* PDF 넣기 */
 $('#btn-add').addEventListener('click', () => $('#file-input').click());

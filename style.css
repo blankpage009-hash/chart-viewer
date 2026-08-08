@@ -764,6 +764,51 @@ input::placeholder { color: var(--text-dim); }
 .theme-btn.is-on .theme-check { visibility: visible; }
 .theme-check svg { display: block; }
 
+/* ── AI 칸 (설정) ─────────────────────────── */
+.ai-settings { flex: 1 1 auto; overflow-y: auto; padding: 6px 18px 18px; }
+.ai-field { display: flex; flex-direction: column; gap: 6px; }
+.ai-field-name { font-size: 12.5px; font-weight: 700; color: var(--text-dim); }
+.ai-field input {
+  height: 40px;
+  padding: 0 10px;
+  border: 1px solid var(--line); border-radius: 7px;
+  background: var(--field-bg); color: var(--text);
+  font-size: 14px; font-family: inherit;
+}
+.ai-field input:focus { outline: 2px solid var(--accent); border-color: transparent; }
+.ai-help { margin: 10px 0 0; font-size: 12px; line-height: 1.65; color: var(--text-dim); }
+.ai-tools {
+  display: flex; align-items: center; gap: 10px;
+  margin-top: 16px; padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+.ai-saved-count { flex: 1 1 auto; font-size: 12px; color: var(--text-dim); }
+
+/* ── AI 해석 창 ───────────────────────────── */
+.ai-modal { width: 620px; }
+.ai-chart-name {
+  margin: 0; padding: 12px 18px 0;
+  font-size: 13px; font-weight: 700; color: var(--accent);
+}
+.ai-body {
+  flex: 1 1 auto; min-height: 120px;
+  overflow-y: auto;
+  padding: 10px 18px 18px;
+  font-size: 14px; line-height: 1.75;
+  /* 해석 글은 길어서 문단 사이가 벌어져야 읽힌다 */
+  white-space: pre-wrap; word-break: break-word;
+}
+.ai-body .ai-wait, .ai-body .ai-error { color: var(--text-dim); white-space: normal; }
+.ai-body .ai-error b { color: #d0483f; }
+/* 제미나이가 **굵게** 로 강조한 소제목을 그대로 살린다 */
+.ai-body b { color: var(--accent); }
+.ai-foot { display: flex; align-items: center; gap: 10px; }
+.ai-disclaimer { flex: 1 1 auto; text-align: left; font-size: 11.5px; color: var(--text-dim); }
+.ai-foot .text-btn { background: var(--chip-bg); color: var(--text); }
+.ai-foot .text-btn:hover { background: var(--chip-hover); }
+.ai-foot .text-btn.primary { background: var(--accent); color: #fff; }
+.ai-foot .text-btn:disabled { opacity: .5; cursor: default; }
+
 /* ── 안내 문구 ────────────────────────────── */
 .toast {
   position: fixed;
