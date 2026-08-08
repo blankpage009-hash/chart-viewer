@@ -793,15 +793,47 @@ input::placeholder { color: var(--text-dim); }
 .ai-body {
   flex: 1 1 auto; min-height: 120px;
   overflow-y: auto;
-  padding: 10px 18px 18px;
-  font-size: 14px; line-height: 1.75;
-  /* 해석 글은 길어서 문단 사이가 벌어져야 읽힌다 */
-  white-space: pre-wrap; word-break: break-word;
+  padding: 0 0 8px;
+  font-size: 14px;
+  word-break: break-word;
 }
-.ai-body .ai-wait, .ai-body .ai-error { color: var(--text-dim); white-space: normal; }
+.ai-body .ai-wait, .ai-body .ai-error {
+  margin: 0; padding: 16px 18px;
+  line-height: 1.7; color: var(--text-dim);
+}
 .ai-body .ai-error b { color: #d0483f; }
-/* 제미나이가 **굵게** 로 강조한 소제목을 그대로 살린다 */
-.ai-body b { color: var(--accent); }
+
+/* 해석은 표로 보여 준다. 줄마다 구분선이 있어야 비행 중에 눈으로 훑기 쉽다 */
+.ai-table { width: 100%; border-collapse: collapse; }
+.ai-table td {
+  /* 왼쪽 여백은 글머리 기호 자리 */
+  padding: 8px 18px 8px 34px;
+  border-bottom: 1px solid var(--row-line);
+  text-align: left; vertical-align: top;
+  line-height: 1.5;
+  position: relative;
+}
+/* 글머리 기호는 글자(•)로 넣으면 기기마다 크기가 달라 보여서 작은 동그라미로 직접 그린다 */
+.ai-table td::before {
+  content: '';
+  position: absolute;
+  left: 20px; top: 15px;
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+/* 묶음 제목은 띠로 구분한다 */
+.ai-table .ai-sec th {
+  padding: 7px 18px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  background: var(--head-bg);
+  color: var(--accent);
+  text-align: left;
+  font-size: 12px; font-weight: 700; letter-spacing: .3px;
+}
+/* 맨 윗줄은 차트 이름 바로 아래라 위쪽 선이 겹쳐 보인다 */
+.ai-table tr:first-child th { border-top: 0; }
 .ai-foot { display: flex; align-items: center; gap: 10px; }
 .ai-disclaimer { flex: 1 1 auto; text-align: left; font-size: 11.5px; color: var(--text-dim); }
 .ai-foot .text-btn { background: var(--chip-bg); color: var(--text); }
