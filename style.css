@@ -275,6 +275,12 @@ input::placeholder { color: var(--text-dim); }
 }
 .layout.sidebar-hidden .sidebar { margin-left: calc(var(--sidebar-w) * -1); }
 
+/* 제목 행을 고정(sticky)하려면 이 묶음 상자가 없어야 한다.
+   sticky는 자기 부모 상자 밖으로는 못 나가는데, 접혀 있는 Pinboards는 상자가 제목 행 높이뿐이라
+   바로 밀려 올라가 버렸다. display:contents 로 상자만 없애면 제목 행·목록이 사이드바의
+   직접 자식이 되어, 사이드바 전체를 기준으로 붙는다 (2026-08-14) */
+.list-section { display: contents; }
+
 .section-head {
   width: 100%;
   display: flex;
