@@ -259,9 +259,8 @@ input::placeholder { color: var(--text-dim); }
 }
 
 /* ── 왼쪽 목록 ────────────────────────────── */
-/* 위(Pinboards 바·즐겨찾기 목록·Airport 바) / 가운데(스크롤) / 아래(Charts 바) 3칸.
-   목록 전체를 통째로 스크롤시키지 않는 이유는, 그러면 어떤 방식을 써도 제목 행이
-   목록을 지나칠 때 화면 밖으로 밀려나기 때문이다 (2026-08-14) */
+/* Pinboards 바·즐겨찾기 목록·Airport 바는 스크롤 밖(위쪽 고정칸)에 둔다.
+   목록 전체를 통째로 스크롤시키면 이 제목 행들이 목록을 지나칠 때 화면 밖으로 밀려난다 (2026-08-14) */
 .sidebar {
   width: var(--sidebar-w);
   flex: 0 0 var(--sidebar-w);
@@ -271,6 +270,12 @@ input::placeholder { color: var(--text-dim); }
   background: var(--panel);
   border-right: 1px solid var(--line);
   transition: margin-left .18s ease;
+  /* 홈 인디케이터(가로 막대) 자리는 margin이 아니라 padding으로 확보한다.
+     margin으로 비워두면 그 틈으로 배경색(--bg)이 비쳐서, 특히 다크 테마에서 목록 패널(--panel)과
+     색이 달라 아래쪽에 딴 색 띠가 있는 것처럼 보인다 (2026-08-02, "아래 여백이 넓다" 지적으로 바꿈).
+     스크롤하는 칸(.sidebar-scroll)이 아니라 바깥인 여기에 두어야, 바닥에 붙은 Charts 바 아래로
+     목록이 비쳐 보이지 않는다 (2026-08-14 지적) */
+  padding-bottom: env(safe-area-inset-bottom);
 }
 .layout.sidebar-hidden .sidebar { margin-left: calc(var(--sidebar-w) * -1); }
 
@@ -306,12 +311,13 @@ input::placeholder { color: var(--text-dim); }
   font-weight: 700;
   text-align: left;
 }
-/* 맨 아래 Charts 바. 홈 인디케이터(가로 막대) 자리를 이 바가 자기 안쪽 여백으로 흡수한다.
-   사이드바 쪽에 padding-bottom 으로 두면 그 틈 아래로 목록이 비쳐 보였다 (2026-08-14 지적) */
-.section-head.foot {
-  border-bottom: 0;
-  border-top: 1px solid var(--line);
-  padding-bottom: calc(11px + env(safe-area-inset-bottom));
+/* 스크롤 칸 안에 있는 Charts 바. 위아래를 다 지정해서 어느 쪽으로 밀려나든 붙어 있게 한다.
+   공항 목록이 펼쳐져 밀려 내려가면 바닥에, 차트 목록을 훑어 올라가면 위쪽에 붙는다 */
+.sidebar-scroll > .section-head {
+  position: sticky;
+  top: 0;
+  bottom: 0;
+  z-index: 2;
 }
 .section-head .caret { font-size: 11px; transition: transform .15s; }
 .section-head.collapsed .caret { transform: rotate(-90deg); }

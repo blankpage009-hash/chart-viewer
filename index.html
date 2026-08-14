@@ -77,9 +77,8 @@
   <div class="layout" id="layout">
 
     <!-- 왼쪽 목록 -->
-    <!-- 위 두 줄(Pinboards·Airport)과 맨 아래 줄(Charts)은 스크롤 밖에 두어 항상 보이게 하고,
-         목록은 가운데 .sidebar-scroll 칸 안에서만 스크롤된다.
-         제목 행을 목록과 같이 흘려보내면(sticky) 목록을 지나칠 때 결국 화면 밖으로 밀려난다 -->
+    <!-- Pinboards 바·즐겨찾기 목록·Airport 바는 스크롤 밖에 두어 항상 보이게 하고,
+         나머지 목록은 .sidebar-scroll 칸 안에서만 스크롤된다 -->
     <aside class="sidebar" id="sidebar">
       <!-- Favorite(Pinboards)는 기본으로 접어 둔다 (자주 안 쓰는 목록이 위 공간을 차지하지 않도록) -->
       <button class="section-head collapsed" data-toggle="fav-body">
@@ -93,13 +92,16 @@
 
       <div class="sidebar-scroll" id="sidebar-scroll">
         <div class="section-body" id="airport-body"></div>
+
+        <!-- Charts 바는 제자리(공항 목록 아래·차트 목록 위)를 지킨다.
+             공항 목록에 밀려 내려가면 바닥에 붙고, 차트 목록을 훑을 때는 위에 붙는다 -->
+        <button class="section-head" data-toggle="result-body">
+          <span class="caret">▾</span> Charts<span class="section-divider" id="result-divider" hidden></span><span class="section-airport-info" id="result-airport-info"></span> <span class="count" id="result-count">0</span>
+        </button>
         <div class="section-body" id="result-body"></div>
+
         <footer class="store-info" id="store-info"></footer>
       </div>
-
-      <button class="section-head foot" data-toggle="result-body">
-        <span class="caret">▾</span> Charts<span class="section-divider" id="result-divider" hidden></span><span class="section-airport-info" id="result-airport-info"></span> <span class="count" id="result-count">0</span>
-      </button>
     </aside>
 
     <div class="sidebar-scrim" id="sidebar-scrim"></div>
