@@ -259,30 +259,41 @@ input::placeholder { color: var(--text-dim); }
 }
 
 /* ── 왼쪽 목록 ────────────────────────────── */
+/* 위(Pinboards 바·즐겨찾기 목록·Airport 바) / 가운데(스크롤) / 아래(Charts 바) 3칸.
+   목록 전체를 통째로 스크롤시키지 않는 이유는, 그러면 어떤 방식을 써도 제목 행이
+   목록을 지나칠 때 화면 밖으로 밀려나기 때문이다 (2026-08-14) */
 .sidebar {
   width: var(--sidebar-w);
   flex: 0 0 var(--sidebar-w);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   background: var(--panel);
   border-right: 1px solid var(--line);
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
   transition: margin-left .18s ease;
-  /* 홈 인디케이터(가로 막대) 자리는 margin이 아니라 padding으로 확보한다.
-     margin으로 비워두면 그 틈으로 배경색(--bg)이 비쳐서, 특히 다크 테마에서 목록 패널(--panel)과
-     색이 달라 아래쪽에 딴 색 띠가 있는 것처럼 보인다. padding이면 그 틈도 목록 자신의 배경색으로
-     채워지므로 화면 끝까지 꽉 차 보인다 (2026-08-02, "아래 여백이 넓다" 지적으로 바꿈) */
-  padding-bottom: env(safe-area-inset-bottom);
 }
 .layout.sidebar-hidden .sidebar { margin-left: calc(var(--sidebar-w) * -1); }
 
-/* 제목 행을 고정(sticky)하려면 이 묶음 상자가 없어야 한다.
-   sticky는 자기 부모 상자 밖으로는 못 나가는데, 접혀 있는 Pinboards는 상자가 제목 행 높이뿐이라
-   바로 밀려 올라가 버렸다. display:contents 로 상자만 없애면 제목 행·목록이 사이드바의
-   직접 자식이 되어, 사이드바 전체를 기준으로 붙는다 (2026-08-14) */
-.list-section { display: contents; }
+/* 가운데 스크롤 칸. min-height:0 이 없으면 flex 칸이 내용 높이만큼 부풀어 스크롤이 생기지 않는다 */
+.sidebar-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* 즐겨찾기 목록은 위쪽 고정 칸에 함께 둔다 (제목 행과 떨어져 보이면 안 되므로).
+   대신 길어져도 위 공간을 다 먹지 않도록 사이드바의 35%까지만 쓰고 그 안에서 스크롤한다 */
+#fav-body {
+  flex: 0 1 auto;
+  max-height: 35%;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
 
 .section-head {
   width: 100%;
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -294,15 +305,14 @@ input::placeholder { color: var(--text-dim); }
   font-size: 15px;
   font-weight: 700;
   text-align: left;
-  /* Pinboards·Airport·Charts 제목 행은 스크롤해도 항상 보이게 고정한다.
-     위 두 개(Pinboards, Airport)는 위쪽에 쌓이고, Charts는 목록 맨 아래에 붙는다
-     (Airport를 펴서 공항 목록이 길어져도 Charts 제목이 화면 밖으로 밀려나지 않도록, 2026-08-14) */
-  position: sticky;
-  z-index: 2;
 }
-.list-section:nth-of-type(1) .section-head { top: 0; }
-.list-section:nth-of-type(2) .section-head { top: var(--head-h, 41px); z-index: 1; }
-.list-section:nth-of-type(3) .section-head { top: auto; bottom: 0; }
+/* 맨 아래 Charts 바. 홈 인디케이터(가로 막대) 자리를 이 바가 자기 안쪽 여백으로 흡수한다.
+   사이드바 쪽에 padding-bottom 으로 두면 그 틈 아래로 목록이 비쳐 보였다 (2026-08-14 지적) */
+.section-head.foot {
+  border-bottom: 0;
+  border-top: 1px solid var(--line);
+  padding-bottom: calc(11px + env(safe-area-inset-bottom));
+}
 .section-head .caret { font-size: 11px; transition: transform .15s; }
 .section-head.collapsed .caret { transform: rotate(-90deg); }
 .section-head .count {
