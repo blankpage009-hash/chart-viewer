@@ -280,10 +280,22 @@ input::placeholder { color: var(--text-dim); }
 }
 .layout.sidebar-hidden .sidebar { margin-left: calc(var(--sidebar-w) * -1); }
 
-/* 가운데 스크롤 칸. min-height:0 이 없으면 flex 칸이 내용 높이만큼 부풀어 스크롤이 생기지 않는다 */
+/* 즐겨찾기 목록은 높이를 묶지 않는다 — 펼쳐 두면 들어 있는 만큼 다 보여야 한다.
+   다만 즐겨찾기가 아주 많을 때 아래 목록 자리를 통째로 먹지는 않도록, 스크롤 칸의
+   최소 높이(아래)를 보장하고 그때만 이 칸이 자기 안에서 스크롤된다 */
+#fav-body {
+  flex: 0 1 auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* 공항·차트 목록 스크롤 칸.
+   flex 기준을 0 으로 둬야 한다. auto(내용 높이)로 두면 이 칸의 긴 목록 높이까지 자리 계산에
+   끼어들어, 자리가 남는데도 위 즐겨찾기 목록까지 같이 찌그러진다.
+   min-height 는 즐겨찾기가 아주 많을 때도 여기가 이만큼은 남게 하는 최소치다 */
 .sidebar-scroll {
-  flex: 1 1 auto;
-  min-height: 0;
+  flex: 1 1 0;
+  min-height: 150px;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
@@ -306,16 +318,14 @@ input::placeholder { color: var(--text-dim); }
 }
 /* 스크롤 칸 안에 있는 Charts 바. 위아래를 다 지정해서 어느 쪽으로 밀려나든 붙어 있게 한다.
    공항 목록이 펼쳐져 밀려 내려가면 바닥에, 차트 목록을 훑어 올라가면 위쪽에 붙는다 */
-/* 세 바는 스크롤해도 위쪽에 차례로 쌓여 붙는다. 각자 제 목록 바로 위에 있으므로,
-   목록과 제목이 어긋나지 않으면서도 셋 다 계속 보인다.
-   z-index 가 목록 안의 공항 코드 줄(.apt-head-sticky, 2)보다 위여야 한다 —
-   같은 값이면 DOM 순서상 나중인 그쪽이 바를 덮어 버린다 (2026-08-14 지적) */
+/* Airport·Charts 바는 스크롤해도 위쪽에 차례로 쌓여 붙는다. 각자 제 목록 바로 위에 있으므로
+   목록과 제목이 어긋나지 않는다. z-index 가 목록 안의 공항 코드 줄(.apt-head-sticky, 2)보다
+   위여야 한다 — 같은 값이면 DOM 순서상 나중인 그쪽이 바를 덮어 버린다 (2026-08-14 지적) */
 .sidebar-scroll > .section-head { position: sticky; z-index: 3; }
-.sidebar-scroll > [data-toggle="fav-body"]     { top: 0; }
-.sidebar-scroll > [data-toggle="airport-body"] { top: var(--bar-h, 43px); }
+.sidebar-scroll > [data-toggle="airport-body"] { top: 0; }
 /* Charts 바만 아래쪽도 지정한다 — 공항 목록에 밀려 내려가면 바닥에 붙게 */
 .sidebar-scroll > [data-toggle="result-body"]  {
-  top: calc(var(--bar-h, 43px) * 2);
+  top: var(--bar-h, 43px);
   bottom: 0;
 }
 .section-head .caret { font-size: 11px; transition: transform .15s; }
@@ -404,10 +414,9 @@ input::placeholder { color: var(--text-dim); }
   z-index: 2;
   background: var(--apt-bg);
 }
-/* 위에 붙어 있는 바에 가려지지 않도록, 자기보다 위에 있는 바 개수만큼 내려서 붙는다.
-   (즐겨찾기 목록 위에는 Pinboards 바 하나, 차트 목록 위에는 세 바가 다 있다) */
-#fav-body    .apt-head-sticky { top: var(--bar-h, 43px); }
-#result-body .apt-head-sticky { top: calc(var(--bar-h, 43px) * 3); }
+/* 차트 목록 위에는 Airport·Charts 두 바가 붙어 있으므로 그만큼 내려서 붙는다.
+   (즐겨찾기 목록은 자기 칸 안에서만 스크롤되므로 위의 top:0 을 그대로 쓴다) */
+#result-body .apt-head-sticky { top: calc(var(--bar-h, 43px) * 2); }
 .apt-head {
   display: flex;
   align-items: baseline;
