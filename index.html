@@ -77,24 +77,23 @@
   <div class="layout" id="layout">
 
     <!-- 왼쪽 목록 -->
-    <!-- Pinboards 바·즐겨찾기 목록·Airport 바는 스크롤 밖에 두어 항상 보이게 하고,
-         나머지 목록은 .sidebar-scroll 칸 안에서만 스크롤된다 -->
+    <!-- 목록은 전부 .sidebar-scroll 한 칸에서 스크롤된다 (어느 목록이든 끝까지 훑어볼 수 있도록).
+         세 바(Pinboards·Airport·Charts)는 각자 제 목록 바로 위에 있으면서,
+         스크롤하면 위쪽에 차례로 쌓여 붙는다 -->
     <aside class="sidebar" id="sidebar">
-      <!-- Favorite(Pinboards)는 기본으로 접어 둔다 (자주 안 쓰는 목록이 위 공간을 차지하지 않도록) -->
-      <button class="section-head collapsed" data-toggle="fav-body">
-        <span class="caret">▾</span> Pinboards <span class="count" id="fav-count">0</span>
-      </button>
-      <div class="section-body collapsed" id="fav-body"></div>
-
-      <button class="section-head" data-toggle="airport-body">
-        <span class="caret">▾</span> Airport <span class="count" id="airport-count">0</span>
-      </button>
-
       <div class="sidebar-scroll" id="sidebar-scroll">
+        <!-- Favorite(Pinboards)는 기본으로 접어 둔다 (자주 안 쓰는 목록이 위 공간을 차지하지 않도록) -->
+        <button class="section-head collapsed" data-toggle="fav-body">
+          <span class="caret">▾</span> Pinboards <span class="count" id="fav-count">0</span>
+        </button>
+        <div class="section-body collapsed" id="fav-body"></div>
+
+        <button class="section-head" data-toggle="airport-body">
+          <span class="caret">▾</span> Airport <span class="count" id="airport-count">0</span>
+        </button>
         <div class="section-body" id="airport-body"></div>
 
-        <!-- Charts 바는 제자리(공항 목록 아래·차트 목록 위)를 지킨다.
-             공항 목록에 밀려 내려가면 바닥에 붙고, 차트 목록을 훑을 때는 위에 붙는다 -->
+        <!-- Charts 바만 아래쪽에도 붙는다 — 공항 목록에 밀려 내려가도 바닥에 보이도록 -->
         <button class="section-head" data-toggle="result-body">
           <span class="caret">▾</span> Charts<span class="section-divider" id="result-divider" hidden></span><span class="section-airport-info" id="result-airport-info"></span> <span class="count" id="result-count">0</span>
         </button>

@@ -1399,14 +1399,14 @@ $$('.section-head').forEach(head => {
   });
 });
 
-/* 차트 목록 안의 공항 코드 줄이 Charts 바 바로 밑에 붙도록, 바 높이를 재서 알려 준다.
+/* 바들이 위쪽에 빈틈없이 쌓이도록 바 한 줄 높이를 재서 알려 준다.
    글꼴 렌더링이 기기마다 미세하게 달라 CSS에 숫자를 박아두면 틈이 생기거나 겹친다 */
-function syncChartsBarHeight() {
+function syncBarHeight() {
   const bar = $('.sidebar-scroll > .section-head');
-  if (bar) document.documentElement.style.setProperty('--charts-bar-h', bar.offsetHeight + 'px');
+  if (bar) document.documentElement.style.setProperty('--bar-h', bar.offsetHeight + 'px');
 }
-syncChartsBarHeight();
-window.addEventListener('resize', syncChartsBarHeight);
+syncBarHeight();
+window.addEventListener('resize', syncBarHeight);
 
 /* 로고를 누르면 화면을 처음 켰을 때 상태로 되돌린다 (2026-08-03 요청).
    되돌리는 것은 '지금 보고 있는 화면'뿐이다 — 넣어둔 차트 PDF, 즐겨찾기, 공항 이름·국가,
