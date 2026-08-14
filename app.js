@@ -1399,6 +1399,15 @@ $$('.section-head').forEach(head => {
   });
 });
 
+/* Pinboards 제목 행의 실제 높이를 재서 Airport 제목 행이 그 바로 밑에 고정되도록 한다
+   (CSS 고정값 대신 실측하는 이유: 글자 렌더링이 기기마다 미세하게 달라서 틈이 생길 수 있음) */
+function syncStickyHeadHeight() {
+  const first = $('.section-head');
+  if (first) document.documentElement.style.setProperty('--head-h', first.offsetHeight + 'px');
+}
+syncStickyHeadHeight();
+window.addEventListener('resize', syncStickyHeadHeight);
+
 /* 로고를 누르면 화면을 처음 켰을 때 상태로 되돌린다 (2026-08-03 요청).
    되돌리는 것은 '지금 보고 있는 화면'뿐이다 — 넣어둔 차트 PDF, 즐겨찾기, 공항 이름·국가,
    차트 회전 방향, 테마는 건드리지 않는다. 실수로 눌릴 자리라 확인을 한 번 받는다 */

@@ -4,7 +4,7 @@
 
 /* ★★ 앱을 고쳐서 다시 올릴 때는 아래 번호를 1 올릴 것 (ncv-v1 → ncv-v2).
        안 올리면 아이패드가 예전 화면을 계속 쓴다. ★★ */
-const CACHE = 'ncv-v34';  // v34: APP 차트 결심고도를 괄호 안 숫자까지 표기
+const CACHE = 'ncv-v35';  // v35: 왼쪽 목록 Pinboards/Airport/Charts 제목 행 스크롤해도 고정
 // (예: ILS DA(H) 238 ft (200 ft)) (2026-08-08)
 
 const APP_FILES = [

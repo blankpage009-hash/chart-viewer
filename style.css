@@ -288,7 +288,15 @@ input::placeholder { color: var(--text-dim); }
   font-size: 15px;
   font-weight: 700;
   text-align: left;
+  /* Pinboards·Airport·Charts 제목 행은 스크롤해도 항상 보이게 고정한다.
+     위 두 개(Pinboards, Airport)는 위쪽에 쌓이고, Charts는 목록 맨 아래에 붙는다
+     (Airport를 펴서 공항 목록이 길어져도 Charts 제목이 화면 밖으로 밀려나지 않도록, 2026-08-14) */
+  position: sticky;
+  z-index: 2;
 }
+.list-section:nth-of-type(1) .section-head { top: 0; }
+.list-section:nth-of-type(2) .section-head { top: var(--head-h, 41px); z-index: 1; }
+.list-section:nth-of-type(3) .section-head { top: auto; bottom: 0; }
 .section-head .caret { font-size: 11px; transition: transform .15s; }
 .section-head.collapsed .caret { transform: rotate(-90deg); }
 .section-head .count {
