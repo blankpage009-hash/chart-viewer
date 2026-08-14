@@ -1399,6 +1399,15 @@ $$('.section-head').forEach(head => {
   });
 });
 
+/* 차트 목록 안의 공항 코드 줄이 Charts 바 바로 밑에 붙도록, 바 높이를 재서 알려 준다.
+   글꼴 렌더링이 기기마다 미세하게 달라 CSS에 숫자를 박아두면 틈이 생기거나 겹친다 */
+function syncChartsBarHeight() {
+  const bar = $('.sidebar-scroll > .section-head');
+  if (bar) document.documentElement.style.setProperty('--charts-bar-h', bar.offsetHeight + 'px');
+}
+syncChartsBarHeight();
+window.addEventListener('resize', syncChartsBarHeight);
+
 /* 로고를 누르면 화면을 처음 켰을 때 상태로 되돌린다 (2026-08-03 요청).
    되돌리는 것은 '지금 보고 있는 화면'뿐이다 — 넣어둔 차트 PDF, 즐겨찾기, 공항 이름·국가,
    차트 회전 방향, 테마는 건드리지 않는다. 실수로 눌릴 자리라 확인을 한 번 받는다 */
