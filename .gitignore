@@ -16,3 +16,9 @@ CLAUDE.md
 # 윈도우가 만드는 잡파일
 Thumbs.db
 desktop.ini
+
+# 재디자인 작업 자료 — 시안 원본·정리 문서·글꼴. 공개 사이트에 올릴 필요가 없다
+design/
+Chart Viewer Redesign.html
+Jeppesen_app icon.png
+.omc/
