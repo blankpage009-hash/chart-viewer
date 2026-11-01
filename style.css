@@ -23,7 +23,7 @@
   --text:        #201e1d;
   --text-dim:    #605d5d;
   --star:        #ec3013;
-  --topbar-h:    50px;
+  --topbar-h:    54px;
   --sidebar-w:   290px;
 
   /* 잔 색들도 변수로 둔다. 다크 테마에서 이 값들만 갈아끼우면 화면 전체 색이 한 번에 바뀐다 */
@@ -81,6 +81,9 @@
   --toast-fg:    #201e1d;
   color-scheme: dark;
 }
+
+/* 어두운 테마에서는 상단 바(먹색)와 바탕(먹색)이 같은 색이라 굵은 선으로 갈라 준다 */
+:root[data-theme="dark"] .topbar { border-bottom: 2px solid var(--rule); }
 
 /* 차트 종류별 색: 목록에서 종류를 색으로 먼저 구분하기 위함 */
 .badge-SID  { background: #2f7fd4; }
@@ -202,7 +205,7 @@ button { cursor: pointer; }
 .text-btn.primary:hover { background: #f0482e; }
 
 /* 검색창 */
-.search-wrap { position: relative; flex: 0 1 195px; min-width: 135px; max-width: 360px; }
+.search-wrap { position: relative; flex: 0 1 250px; min-width: 150px; max-width: 360px; }
 .search-wrap input {
   width: 100%;
   height: 40px;
@@ -238,18 +241,18 @@ input::placeholder { color: var(--text-dim); }
   -webkit-overflow-scrolling: touch;
   max-width: 562px;
   scroll-snap-type: x proximity;
-  /* topbar 는 모든 칸을 세로 가운데(align-items: center)로 맞추므로, 칩(29px)과 검색창(34px)의
-     세로 중심은 이미 같다. 다만 높이가 달라 칩의 아래쪽 선이 검색창보다 2.5px(=(34-29)/2) 위에
+  /* topbar 는 모든 칸을 세로 가운데(align-items: center)로 맞추므로, 칩(30px)과 검색창(36px)의
+     세로 중심은 이미 같다. 다만 높이가 달라 칩의 아래쪽 선이 검색창보다 3px(=(36-30)/2) 위에
      생기므로, 그만큼 아래로 밀어 두 아래쪽 선을 맞춘다 (2026-08-02, 아래쪽 라인 정렬 요청) */
   position: relative;
-  top: 2.5px;
+  top: 3px;
 }
 .fav-airports::-webkit-scrollbar { display: none; }
 .fav-apt-chip {
   scroll-snap-align: start;
   flex: 0 0 58px;
   width: 58px;
-  height: 29px;            /* 검색창(34px)보다 조금 낮게 */
+  height: 30px;            /* 검색창(36px)보다 조금 낮게 */
   padding: 0;
   border: 0;
   border-radius: 0;
@@ -257,14 +260,14 @@ input::placeholder { color: var(--text-dim); }
   box-shadow: inset 0 0 0 1px color-mix(in srgb, #f3f2f2 12%, transparent);
   color: #f3f2f2;
   font-size: 12px;
-  font-weight: 700;
-  letter-spacing: .2px;
+  font-weight: 800;
+  letter-spacing: .04em;
   white-space: nowrap;
   text-align: center;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.fav-apt-chip:hover { background: rgba(255,255,255,.22); }
+.fav-apt-chip:hover { background: var(--btn-hover); box-shadow: inset 0 0 0 1px #f3f2f2; }
 
 .top-actions { display: flex; gap: 6px; margin-left: auto; }
 
@@ -272,16 +275,16 @@ input::placeholder { color: var(--text-dim); }
    누를 수 있는 자리는 그대로 두고 바탕색만 없앤 것이라, 손가락으로 누르는 넓이는 줄지 않는다.
    나란히 보기가 켜진 상태(.is-on)는 바탕 대신 글자색(파랑)으로 표시한다 */
 .top-actions .icon-btn { background: transparent; }
-.top-actions .icon-btn:hover { background: rgba(255,255,255,.14); }
+.top-actions .icon-btn:hover { background: var(--btn-hover); }
 .top-actions .icon-btn.is-on { background: transparent; color: var(--accent-text); }
 
-/* 상단 바 버튼·검색창은 차트가 더 넓게 보이도록 낮게 맞춘다 (공항 정보 창의 버튼은 그대로) */
+/* 상단 바 버튼은 38, 검색창은 36 (시안 2번). 설정 창 안의 버튼은 이 규칙에 걸리지 않는다 */
 .topbar .icon-btn,
-.topbar .text-btn,
-.search-wrap input { height: 34px; }
-.topbar .icon-btn { min-width: 34px; font-size: 16px; }
+.topbar .text-btn { height: 38px; }
+.search-wrap input { height: 36px; }
+.topbar .icon-btn { min-width: 38px; font-size: 16px; }
 .search-wrap input { font-size: 14px; }
-.clear-btn { top: 3px; width: 28px; height: 28px; font-size: 17px; }
+.clear-btn { top: 4px; width: 28px; height: 28px; font-size: 17px; }
 
 /* 나란히 보기 아이콘: 네모 두 개를 바짝 붙여 그린다 */
 .split-icon { display: block; margin: 0 auto; }
@@ -305,7 +308,7 @@ input::placeholder { color: var(--text-dim); }
   flex-direction: column;
   overflow: hidden;
   background: var(--panel);
-  border-right: 1px solid var(--line);
+  border-right: 2px solid var(--rule);
   transition: margin-left .18s ease;
   /* 홈 인디케이터(가로 막대) 자리는 margin이 아니라 padding으로 확보한다.
      margin으로 비워두면 그 틈으로 배경색(--bg)이 비쳐서, 특히 다크 테마에서 목록 패널(--panel)과
@@ -342,14 +345,17 @@ input::placeholder { color: var(--text-dim); }
   flex: 0 0 auto;
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 11px 12px;
+  gap: 8px;
+  height: 40px;
+  padding: 0 12px;
   border: 0;
   border-bottom: 1px solid var(--line);
-  background: var(--head-bg);   /* 연한 네이비 (밝은 회색이었던 것을 상단 바 색과 어울리게 바꿈) */
+  background: var(--bg);        /* 시안 2번: 구역 바는 칸(panel)보다 한 톤 다른 바탕색 */
   color: var(--text);
-  font-size: 15px;
-  font-weight: 700;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  text-transform: uppercase;
   text-align: left;
 }
 /* 스크롤 칸 안에 있는 Charts 바. 위아래를 다 지정해서 어느 쪽으로 밀려나든 붙어 있게 한다.
@@ -357,7 +363,7 @@ input::placeholder { color: var(--text-dim); }
 /* Airport·Charts 바는 스크롤해도 위쪽에 차례로 쌓여 붙는다. 각자 제 목록 바로 위에 있으므로
    목록과 제목이 어긋나지 않는다. z-index 가 목록 안의 공항 코드 줄(.apt-head-sticky, 2)보다
    위여야 한다 — 같은 값이면 DOM 순서상 나중인 그쪽이 바를 덮어 버린다 (2026-08-14 지적) */
-.sidebar-scroll > .section-head { position: sticky; z-index: 3; }
+.sidebar-scroll > .section-head { position: sticky; z-index: 3; border-top: 2px solid var(--rule); }
 .sidebar-scroll > [data-toggle="airport-body"] { top: 0; }
 /* Charts 바만 아래쪽도 지정한다 — 공항 목록에 밀려 내려가면 바닥에 붙게 */
 .sidebar-scroll > [data-toggle="result-body"]  {
@@ -366,13 +372,13 @@ input::placeholder { color: var(--text-dim); }
 }
 .section-head .caret { font-size: 11px; transition: transform .15s; }
 .section-head.collapsed .caret { transform: rotate(-90deg); }
+/* 시안 2번: 개수는 알약 없이 숫자만. 제목의 대문자·자간을 물려받지 않게 풀어 둔다 */
 .section-head .count {
   margin-left: auto;
-  padding: 1px 7px;
-  border-radius: 0;
-  background: var(--count-bg);
   color: var(--text-dim);
-  font-size: 11px;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0;
 }
 .section-body.collapsed { display: none; }
 
@@ -389,8 +395,10 @@ input::placeholder { color: var(--text-dim); }
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
   color: var(--text-dim);
 }
 
@@ -400,7 +408,7 @@ input::placeholder { color: var(--text-dim); }
   display: flex;
   align-items: center;
   width: 100%;
-  min-height: 40px;
+  min-height: 42px;
   border-top: 1px solid var(--row-line);
 }
 .airport-row:hover { background: var(--row-hover); }
@@ -417,7 +425,7 @@ input::placeholder { color: var(--text-dim); }
   color: inherit;
 }
 /* ICAO 코드 칸 폭을 고정해서, 코드 글자 폭이 제각각이라도 뒤 이름·국가 시작 위치가 나란히 맞는다 */
-.airport-row .apt-icao { flex: 0 0 44px; }
+.airport-row .apt-icao { flex: 0 0 52px; }
 .airport-row .apt-name { flex: 1 1 auto; min-width: 0; }
 .airport-row .apt-fav-toggle {
   flex: 0 0 auto;
@@ -462,7 +470,7 @@ input::placeholder { color: var(--text-dim); }
   padding: 9px 12px 0;
   background: var(--apt-bg);
 }
-.apt-icao { font-size: 13px; font-weight: 700; letter-spacing: .5px; }
+.apt-icao { font-size: 13px; font-weight: 800; letter-spacing: .05em; }
 .apt-name { font-size: 11.5px; color: var(--text-dim); overflow: hidden;
             text-overflow: ellipsis; white-space: nowrap; }
 /* 이름·국가가 비어 있음을 알려주기만 하고, 눌러도 되는 것처럼 강조하지는 않는다 */
@@ -472,29 +480,32 @@ input::placeholder { color: var(--text-dim); }
 .apt-filters {
   display: flex;
   flex-wrap: nowrap;
-  gap: 3px;
-  /* 공항이 하나만 나올 때는 위 머리글이 통째로 빠지므로, 위 여백을 아래와 같이 8px씩 직접 갖는다 */
-  padding: 8px;
-  background: var(--apt-bg);
+  /* 공항이 하나만 나올 때는 위 머리글이 통째로 빠지므로, 위 여백을 아래와 같이 10px씩 직접 갖는다 */
+  padding: 10px 12px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
 }
+/* 시안 2번: 알약 여섯 개가 아니라 가는 테두리 하나로 묶인 칸 여섯 개. 테두리가 겹쳐 두꺼워지지
+   않게 둘째 칸부터 왼쪽으로 1px 당겨 겹친다 */
 .apt-filter-btn {
   flex: 1 1 0;
   min-width: 0;
-  height: 22px;
-  padding: 0 2px;
-  border: 0;
+  height: 26px;
+  padding: 0 4px;
+  border: 1px solid var(--rule);
   border-radius: 0;
-  background: var(--chip-bg);
+  background: transparent;
   color: var(--text-dim);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: .1px;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: .04em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.apt-filter-btn:hover { background: var(--chip-hover); }
-.apt-filter-btn.is-on { background: var(--accent); color: #fff; }
+.apt-filter-btn + .apt-filter-btn { margin-left: -1px; }
+.apt-filter-btn:hover { background: var(--btn-hover); }
+.apt-filter-btn.is-on { background: var(--accent); border-color: var(--accent); color: #fff; position: relative; }
 
 /* 차트 한 줄 = [차트 열기] + [별표] + [지우기] */
 .chart-row {
@@ -511,8 +522,8 @@ input::placeholder { color: var(--text-dim); }
   min-width: 0;
   display: flex;
   align-items: center;
-  gap: 8px;
-  min-height: 46px;               /* 손가락으로 누를 수 있는 최소 높이 */
+  gap: 10px;
+  min-height: 50px;               /* 손가락으로 누를 수 있는 최소 높이 */
   padding: 7px 4px 7px 12px;
   border: 0;
   background: transparent;
@@ -520,20 +531,25 @@ input::placeholder { color: var(--text-dim); }
   color: inherit;
 }
 
+/* 색은 위의 .badge-SID 등이 정한다. 시안은 안쪽 테두리를 같은 색으로 한 번 더 두르지만
+   바탕과 같은 색이라 눈에 보이지 않아 생략했다 */
 .badge {
   flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-width: 44px;
-  padding: 3px 5px;
+  height: 20px;
+  padding: 0 6px;
   border-radius: 0;
   color: #fff;
   font-size: 10px;
-  font-weight: 700;
-  text-align: center;
-  letter-spacing: .4px;
+  font-weight: 800;
+  letter-spacing: .06em;
 }
-.chart-meta  { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
-.chart-no    { font-size: 12px; font-weight: 700; color: var(--accent-text); }
-.chart-title { font-size: 12.5px; line-height: 1.35; word-break: break-word; }
+.chart-meta  { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.chart-no    { font-size: 11.5px; font-weight: 800; color: var(--accent-text); }
+.chart-title { font-size: 13px; line-height: 1.3; word-break: break-word; }
 
 /* 차트를 지우는 일은 설정 창의 Files 칸에서만 한다 (목록의 휴지통 버튼은 없앴다) */
 .star-btn {
@@ -567,12 +583,11 @@ input::placeholder { color: var(--text-dim); }
   flex: 1 1 auto;
   min-width: 0;
   display: flex;
-  gap: 5px;
-  /* 차트를 최대한 크게 보려고 네 방향 다 똑같이 최소 여백만 둔다.
-     홈 인디케이터 자리는 여기서 비워두지 않고, 차트 칸(.viewer) 안쪽 맨 아래에 그 칸 자신의
+  /* 시안 2번: 차트 칸이 화면 가장자리까지 꽉 차고, 2분할일 때는 칸 사이를 2px 굵은 선(.viewer + .viewer)이
+     가른다. 홈 인디케이터 자리는 여기서 비워두지 않고, 차트 칸(.viewer) 안쪽 맨 아래에 그 칸 자신의
      색으로 채워 넣는다 (아래쪽 참고) — 그래야 화면 바탕색이 다른 다크 테마에서도 틈으로
      딴 색이 비치지 않고 칸이 화면 끝까지 꽉 차 보인다 (2026-08-02, "아래 여백이 넓다" 지적으로 바꿈) */
-  padding: 4px calc(4px + env(safe-area-inset-right)) 4px 4px;
+  padding: 0 env(safe-area-inset-right) 0 0;
 }
 
 .viewer {
@@ -580,7 +595,7 @@ input::placeholder { color: var(--text-dim); }
   min-width: 0;
   display: flex;
   flex-direction: column;
-  border: 2px solid transparent;
+  border: 0;
   border-radius: 0;
   background: var(--panel);
   overflow: hidden;
@@ -588,16 +603,19 @@ input::placeholder { color: var(--text-dim); }
      .viewer-body 안쪽 padding(3px)을 건드리면 drawPage의 "-6" 계산과 어긋나므로 손대지 않는다 */
   padding-bottom: env(safe-area-inset-bottom);
 }
-/* 2분할일 때만 어느 쪽에 차트가 열릴지 테두리로 표시 */
-.viewers.split .viewer.is-active { border-color: var(--accent); }
+.viewer + .viewer:not([hidden]) { border-left: 2px solid var(--rule); }
+/* 2분할일 때만 어느 쪽에 차트가 열릴지 알려 준다. 예전에는 칸 전체를 테두리로 둘렀는데
+   이제 칸이 가장자리까지 차 있어서, 위쪽 줄 밑에 빨간 선을 긋는 쪽이 덜 거슬린다 */
+.viewers.split .viewer.is-active .viewer-bar { box-shadow: inset 0 -2px 0 var(--accent); }
 
 .viewer-bar {
   display: flex;
   align-items: center;
-  gap: 3px;
-  /* 차트가 조금이라도 더 커 보이도록 이 줄(제목 + － 100% ＋ 회전·전체보기·즐겨찾기·× )의
-     위아래 여백을 줄였다. 48px → 41px → 34px (2026-08-02, 두 차례 요청으로 더 줄임) */
-  padding: 2px 5px 2px 10px;
+  gap: 1px;
+  /* 시안 2번: 높이 42px 고정. 예전(34px)보다 커졌지만 아이콘 버튼 30px 이 숨 쉴 자리가 생긴다 */
+  height: 42px;
+  flex: 0 0 auto;
+  padding: 0 6px 0 12px;
   border-bottom: 1px solid var(--line);
   background: var(--bar-bg);
 }
@@ -617,10 +635,11 @@ input::placeholder { color: var(--text-dim); }
   padding: 2px 6px;
   border-radius: 0;
   background: #fff;
-  color: #111;
+  color: #201e1d;
+  box-shadow: inset 0 0 0 1px #201e1d;
   font-size: 11px;
-  font-weight: 700;
-  letter-spacing: .5px;
+  font-weight: 800;
+  letter-spacing: .06em;
 }
 /* 종류 배지(SID/STAR/APP/TAXI/etc)는 줄지 않고, 뒤 글자만 길면 말줄임표로 잘린다 */
 .viewer-title .badge { flex: 0 0 auto; }
@@ -633,11 +652,11 @@ input::placeholder { color: var(--text-dim); }
 .spacer { flex: 1 1 auto; }
 
 .page-nav { display: flex; align-items: center; gap: 2px; }
-.page-label { font-size: 11px; color: var(--text-dim); min-width: 40px; text-align: center; }
-.zoom-label { min-width: 40px; font-weight: 600; }
+.page-label { font-size: 11.5px; font-weight: 600; color: var(--text); min-width: 38px; text-align: center; }
+.zoom-label { min-width: 44px; font-weight: 800; }
 /* .icon-btn.small 의 font-size(15px)보다 "100%" 글자를 따로 조금 더 줄인다.
    세 클래스짜리 선택자로 우선순위를 높여야 이긴다 */
-.icon-btn.small.zoom-label { font-size: 13px; }
+.icon-btn.small.zoom-label { font-size: 12px; color: var(--text); }
 /* 닫기(×)는 그림이 아니라 글자라서, 옆의 아이콘들을 키우면 혼자 작아 보인다 — 같이 키운다 */
 .viewer-bar .icon-btn.small[data-act="close"] { font-size: 19px; }
 
@@ -1016,7 +1035,6 @@ body.is-fullscreen .viewer:not(.is-active) { display: none; }
    흔히 쓰는 900px로 잡으면 세로 화면(1024px)에 아예 적용되지 않는다 (2026-08-02에 겪음).
    1100px면 세로에서만 걸리고 가로에서는 원래(넓은 화면) 값이 그대로 쓰인다 */
 @media (max-width: 1100px) {
-  .search-wrap { flex: 0 1 230px; }        /* 검색창을 조금 더 크게 */
   /* 즐겨찾기 공항 칩은 기본 9개 대신 4개까지만 보이고, 더 있으면 옆으로 밀어서 본다.
      247px = 칩 4개(58px×4) + 칩 사이 간격 3개(5px×3). 칩 개수·폭·간격을 바꾸면 여기도 같이 고칠 것 */
   .fav-airports { max-width: 247px; }
