@@ -1575,7 +1575,15 @@ async function restoreBackup(file) {
   const s = manifest.settings || {};
   if (Array.isArray(s.favorites))   { favorites   = [...new Set([...favorites, ...s.favorites])];     save(KEY_FAV, favorites); }
   if (Array.isArray(s.favAirports)) { favAirports = [...new Set([...favAirports, ...s.favAirports])]; save(KEY_APT_FAV, favAirports); }
-  if (s.airports  && typeof s.airports  === 'object') { airports  = { ...airports,  ...s.airports  }; save(KEY_APT, airports); }
+  // 공항 이름·국가는 칸 하나씩 본다. 백업에는 아직 안 적은 빈 칸도 들어 있어서,
+  // 통째로 덮으면 이 기기에서 나중에 적어 넣은 이름이 빈 칸에 지워진다
+  if (s.airports && typeof s.airports === 'object') {
+    for (const [icao, v] of Object.entries(s.airports)) {
+      const now = airports[icao] || { name: '', country: '' };
+      airports[icao] = { name: v?.name || now.name, country: v?.country || now.country };
+    }
+    save(KEY_APT, airports);
+  }
   if (s.rotations && typeof s.rotations === 'object') { rotations = { ...rotations, ...s.rotations }; save(KEY_ROT, rotations); }
   if (s.aiNotes   && typeof s.aiNotes   === 'object') { aiNotes   = { ...aiNotes,   ...s.aiNotes   }; save(KEY_AI_NOTES, aiNotes); }
   if (s.theme === 'dark' || s.theme === 'light') applyTheme(s.theme);
