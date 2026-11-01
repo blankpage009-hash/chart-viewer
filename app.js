@@ -1623,15 +1623,19 @@ async function restoreBackup(file) {
   if (s.theme === 'dark' || s.theme === 'light') applyTheme(s.theme);
 
   busy(null);
-  if (files.length) {
-    await addFiles(files);          // 넣기·용량 부족 처리·목록 새로 그리기를 그대로 쓴다
-  } else {
-    await refreshLibrary();
-    toast('백업 안에 차트 파일이 없어 설정만 되돌렸습니다.');
+  try {
+    if (files.length) {
+      await addFiles(files);        // 넣기·용량 부족 처리·목록 새로 그리기를 그대로 쓴다
+    } else {
+      await refreshLibrary();
+      toast('백업 안에 차트 파일이 없어 설정만 되돌렸습니다.');
+    }
+  } finally {
+    // 중간에 잘못되더라도 화면 붙잡은 것은 반드시 놓아 준다 (안 그러면 배터리가 샌다)
+    await keepAwake(false);
   }
   renderAiTab();
   renderBackupTab();
-  await keepAwake(false);
 }
 
 /* ── 10. 화면 연결 ────────────────────────────────────────────── */
