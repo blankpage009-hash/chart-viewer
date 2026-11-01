@@ -32,6 +32,7 @@
   --apt-bg:      #f8f4f4;   /* 공항 코드 + 종류 필터 줄 */
   --row-hover:   color-mix(in srgb, #201e1d 6%, transparent);
   --row-open:    #ffe0d9;   /* 지금 열려 있는 차트 줄 */
+  --row-picked:  color-mix(in srgb, #ec3013 7%, transparent);   /* 설정 Files 칸에서 체크한 줄 */
   --row-line:    color-mix(in srgb, #201e1d 13%, transparent);   /* 줄 사이 얇은 선 */
   --chip-bg:     #eae9e9;
   --chip-hover:  #d7d3d3;
@@ -65,6 +66,7 @@
   --apt-bg:      #2d2b2b;
   --row-hover:   color-mix(in srgb, #f3f2f2 7%, transparent);
   --row-open:    color-mix(in srgb, #ec3013 24%, #2d2b2b);
+  --row-picked:  color-mix(in srgb, #ec3013 10%, transparent);
   --row-line:    color-mix(in srgb, #f3f2f2 12%, transparent);
   --chip-bg:     color-mix(in srgb, #f3f2f2 6%, #2d2b2b);
   --chip-hover:  color-mix(in srgb, #f3f2f2 12%, #2d2b2b);
@@ -739,41 +741,97 @@ input::placeholder { color: var(--text-dim); }
 .modal-head h2 { margin: 0; font-size: 16px; flex: 1 1 auto; }
 .modal-head .icon-btn { background: var(--chip-bg); color: var(--text); }
 .modal-note { margin: 0; padding: 12px 18px 6px; font-size: 12.5px; color: var(--text-dim); }
-.airport-table { flex: 1 1 auto; overflow-y: auto; padding: 6px 18px 18px; }
 
-/* 설정 창 위쪽 탭 (Airport · Files) */
+/* 설정 창은 탭을 바꿔도 창 크기가 출렁이지 않게 640×600 으로 고정하고, 안의 목록만 스크롤한다.
+   화면이 그보다 작으면(세로 화면·휴대폰) 바깥 여백 안에 맞춰 줄어든다 — 바깥 여백이 이미
+   시계·홈 인디케이터 자리를 빼 두었으므로 100% 가 곧 '안전하게 쓸 수 있는 크기'다.
+   AI 창도 .modal 을 같이 쓰므로 여기서는 설정 창만 고른다 */
+#settings-modal .modal { width: min(640px, 100%); height: min(600px, 100%); max-height: none; }
+#settings-modal .modal-head { padding: 16px 14px 14px 22px; border-bottom: 0; }
+#settings-modal .modal-head h2 { font-size: 22px; font-weight: 800; letter-spacing: -.015em; line-height: 1.1; }
+#settings-modal .modal-close {
+  width: 32px; height: 32px; min-width: 32px; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: transparent; color: var(--text);
+  box-shadow: inset 0 0 0 1px var(--rule);
+}
+#settings-modal .modal-close:hover { background: var(--btn-hover); }
+#settings-modal .modal-note { padding: 16px 22px 10px; }
+
+/* 설정 창 위쪽 탭 */
 .modal-tabs {
+  flex: 0 0 auto;
   display: flex;
   /* 탭이 다섯 개라 좁은 화면에서는 가로로 밀어 볼 수 있게 둔다 */
   overflow-x: auto;
-  gap: 6px;
-  padding: 10px 18px 0;
-  border-bottom: 1px solid var(--line);
+  gap: 24px;
+  padding: 0 22px;
+  /* 밑줄을 border 로 그으면 overflow 때문에 켜진 탭의 빨간 밑줄이 그 위에 겹치지 못하고 잘린다.
+     그림자로 바탕에 깔아 두면 탭(자식)이 그 위에 그려진다 */
+  box-shadow: inset 0 -2px 0 var(--rule);
 }
 .tab-btn {
   flex: 0 0 auto;
-  height: 36px;
-  padding: 0 16px;
+  height: 42px;
+  padding: 0;
   border: 0;
   border-radius: 0;
   background: transparent;
   color: var(--text-dim);
-  font-size: 14px;
-  font-weight: 700;
+  font-size: 13.5px;
+  font-weight: 800;
 }
-.tab-btn:hover { background: var(--btn-hover); }
-.tab-btn.is-on { background: var(--tab-on-bg); color: var(--accent-text); box-shadow: inset 0 -2px 0 var(--accent); }
+.tab-btn:hover { color: var(--text); }
+.tab-btn.is-on { color: var(--text); box-shadow: inset 0 -3px 0 var(--accent); }
+
+/* 설정 창 안의 글자 버튼. 기본 .text-btn 은 먹색 상단 바용(반투명 흰 글자)이라
+   밝은 창 안에서는 글자가 거의 안 보인다 — 여기서 창에 맞는 모양으로 다시 입힌다 */
+#settings-modal .text-btn {
+  height: 32px;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 0 12px;
+  background: transparent;
+  color: var(--text);
+  box-shadow: inset 0 0 0 1.5px var(--rule);
+  font-size: 13px; font-weight: 700; font-family: inherit;
+}
+#settings-modal .text-btn:not(:disabled):hover { background: var(--btn-hover); }
+#settings-modal .text-btn.primary { background: var(--accent); color: #fff; box-shadow: none; }
+#settings-modal .text-btn.primary:not(:disabled):hover { background: #f0482e; }
+#settings-modal .text-btn.danger { color: var(--accent-text); box-shadow: inset 0 0 0 1.5px var(--accent-text); }
+#settings-modal .text-btn.ghost { box-shadow: none; }
+#settings-modal .text-btn:disabled { opacity: .45; cursor: default; }
+
+/* 네모 체크상자. 기기 기본 체크상자는 아이패드에서 둥글게 나와서 모서리 0 시안과 안 맞는다.
+   반쯤 선택(:indeterminate)은 가운데 짧은 막대로 그린다 */
+.sq-check {
+  -webkit-appearance: none; appearance: none;
+  flex: 0 0 auto;
+  width: 18px; height: 18px;
+  margin: 0;
+  border: 1.5px solid var(--text-dim);
+  border-radius: 0;
+  background: transparent no-repeat center;
+  cursor: pointer;
+}
+.sq-check:checked, .sq-check:indeterminate { border-color: var(--accent); background-color: var(--accent); }
+.sq-check:checked {
+  background-size: 12px 12px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3.5' stroke-linecap='square'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E");
+}
+.sq-check:indeterminate { background-size: 8px 2px; background-image: linear-gradient(#fff, #fff); }
+.sq-check:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 /* 탭 하나가 창의 남은 높이를 다 쓰고, 그 안의 목록만 스크롤되게 한다 */
 .tab-panel { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
 
 /* Files 칸 */
-.file-search { position: relative; padding: 12px 18px 0; }
+.file-search { position: relative; padding: 16px 22px 0; }
 .file-search input {
   width: 100%;
   height: 36px;
   padding: 0 32px 0 12px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--rule);
   border-radius: 0;
   background: var(--field-bg);
   font-size: 14px;
@@ -781,113 +839,174 @@ input::placeholder { color: var(--text-dim); }
   color: var(--text);
 }
 .file-search input:focus { outline: 2px solid var(--accent); border-color: transparent; }
-.file-search .clear-btn { top: 15px; right: 22px; }
+.file-search .clear-btn { top: 20px; right: 26px; }
 
 .file-tools {
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 18px;
-  border-bottom: 1px solid var(--line);
+  padding: 12px 22px;
+  border-bottom: 2px solid var(--rule);
 }
-.check-all { display: flex; align-items: center; gap: 6px; font-size: 13px; white-space: nowrap; }
-.check-all input, .file-row input { width: 18px; height: 18px; accent-color: var(--accent); }
-.file-sum { flex: 1 1 auto; min-width: 0; font-size: 12px; color: var(--text-dim); }
-.text-btn.danger { background: #d0483f; color: #fff; }
-.text-btn.danger:hover { background: #e0574d; }
-.text-btn.danger:disabled { background: var(--chip-bg); color: var(--text-dim); cursor: default; }
+.check-all { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; white-space: nowrap; cursor: pointer; }
+.file-sum { flex: 1 1 auto; min-width: 0; font-size: 12px; color: var(--text-dim);
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+/* 휴대폰 폭에서는 버튼 넷이 한 줄에 안 들어간다 — 개수·용량 글자를 아랫줄로 내린다 */
+@media (max-width: 620px) {
+  .file-tools { flex-wrap: wrap; row-gap: 8px; }
+  .file-sum { order: 1; flex-basis: 100%; }
+}
 
-.file-table { flex: 1 1 auto; overflow-y: auto; padding: 4px 18px 18px; }
+/* 공항 머리줄이 창 양끝까지 꽉 차야 스크롤할 때 위에 붙어 있는 모양이 자연스럽다.
+   그래서 목록 자체 여백은 0 으로 두고 여백은 줄마다 준다 */
+.file-table { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 0; }
+.file-table .empty-note { padding: 18px 22px; }
+.file-group { border-bottom: 1px solid var(--line); }
+.file-group-head {
+  position: sticky; top: 0; z-index: 1;
+  display: flex; align-items: stretch;
+  height: 50px;
+  background: var(--panel);   /* 위에 붙을 때 아래 줄이 비치지 않게 바탕을 꼭 칠한다 */
+}
+.file-group.is-open .file-group-head { background: var(--head-bg); }
+/* 체크상자는 18px 이지만 손가락으로 누르는 자리는 머리줄 높이만큼 넉넉히 잡는다 */
+.file-group-check { flex: 0 0 auto; display: flex; align-items: center; padding: 0 12px 0 22px; cursor: pointer; }
+.file-group-toggle {
+  flex: 1 1 auto; min-width: 0;
+  display: flex; align-items: center; gap: 10px;
+  padding: 0 22px 0 0;
+  border: 0; border-radius: 0;
+  background: transparent; color: var(--text);
+  font: inherit; text-align: left;
+  cursor: pointer;
+}
+.file-chev { flex: 0 0 auto; transform: rotate(-90deg); transition: transform .15s; }
+.file-group.is-open .file-chev { transform: none; }
+.file-group-icao { flex: 0 0 48px; font-size: 14px; font-weight: 800; letter-spacing: .05em; }
+.file-group-name { flex: 1 1 auto; min-width: 0; font-size: 12.5px; color: var(--text-dim);
+                   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.file-group-name.is-empty { font-style: italic; }
+.file-group-meta { flex: 0 0 auto; font-size: 12px; color: var(--text-dim);
+                   white-space: nowrap; font-variant-numeric: tabular-nums; }
 .file-row {
   display: flex;
   align-items: center;
-  gap: 9px;
-  padding: 7px 4px;
-  border-bottom: 1px solid var(--row-line);
+  gap: 10px;
+  /* 왼쪽 52px = 머리줄 체크상자 뒤, 펼침 화살표 자리에 차트 줄 체크상자가 오도록 */
+  padding: 8px 22px 8px 52px;
+  border-top: 1px solid var(--line);
   cursor: pointer;
 }
 .file-row:hover { background: var(--row-hover); }
+.file-row.is-picked { background: var(--row-picked); }
 .file-info { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
-.file-main { font-size: 12.5px; line-height: 1.35; word-break: break-word; }
+.file-main { font-size: 13px; line-height: 1.35; word-break: break-word; }
+.file-no { margin-right: 6px; font-weight: 800; color: var(--accent-text); font-variant-numeric: tabular-nums; }
 .file-sub  { font-size: 11px; color: var(--text-dim);
              overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.file-size { flex: 0 0 auto; font-size: 11.5px; color: var(--text-dim); }
-.apt-row { display: flex; gap: 8px; align-items: center; padding: 5px 0; }
-.apt-row .code {
-  flex: 0 0 60px; font-weight: 700; font-size: 13px; letter-spacing: .5px;
+.file-size { flex: 0 0 auto; font-size: 11.5px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+
+/* Airport 칸 — ICAO · 이름 · 국가 세 칸을 머리줄과 같은 폭으로 맞춘다 */
+.apt-table-head, .apt-row { display: grid; grid-template-columns: 64px minmax(0, 1fr) minmax(0, 1fr); gap: 8px; }
+.apt-table-head {
+  flex: 0 0 auto;
+  margin: 0 22px; padding: 0 0 6px;
+  border-bottom: 2px solid var(--rule);
+  font-size: 10.5px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--text-dim);
 }
+.airport-table { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 4px 22px 16px; }
+.apt-row { align-items: center; padding: 6px 8px; margin: 0 -8px; border-bottom: 1px solid var(--line); }
+.apt-row .code { font-weight: 800; font-size: 13px; letter-spacing: .05em; }
 .apt-row input {
-  flex: 1 1 auto; min-width: 0; height: 38px;
+  min-width: 0; height: 32px;
   padding: 0 10px;
-  border: 1px solid var(--line); border-radius: 0;
+  border: 1px solid var(--rule); border-radius: 0;
   background: var(--field-bg); color: var(--text);
-  font-size: 14px; font-family: inherit;
+  font-size: 13.5px; font-family: inherit;
 }
 .apt-row input:focus { outline: 2px solid var(--accent); border-color: transparent; }
 /* 목록에서 눌러 들어온 공항이 어느 줄인지 알려준다 */
 .apt-row.is-target { background: var(--row-open); border-radius: 0; }
 .modal-foot { padding: 12px 18px; border-top: 1px solid var(--line); text-align: right; }
 .modal-foot .text-btn { color: #fff; }
+#settings-modal .modal-foot { flex: 0 0 auto; padding: 12px 22px; border-top: 2px solid var(--rule); }
+#settings-modal .modal-foot .text-btn { min-width: 110px; justify-content: center; }
 
 /* Theme 칸 — 밝게 / 어둡게 중 하나를 고른다 */
-.theme-list { flex: 1 1 auto; overflow-y: auto; padding: 6px 18px 18px;
-              display: flex; flex-direction: column; gap: 8px; }
+.theme-list { flex: 1 1 auto; overflow-y: auto; padding: 6px 22px 18px;
+              display: flex; flex-direction: column; gap: 10px; }
 .theme-btn {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   width: 100%;
-  padding: 10px 12px;
-  border: 1px solid var(--line);
+  padding: 14px;
+  border: 1px solid var(--rule);
   border-radius: 0;
   background: transparent;
   color: var(--text);
+  font-family: inherit;
   text-align: left;
 }
 .theme-btn:hover { background: var(--btn-hover); }
-.theme-btn.is-on { border-color: var(--accent); background: var(--tab-on-bg); }
-/* 고르기 전에 어떤 색인지 보이도록 작은 색 견본을 붙인다 */
+.theme-btn.is-on { box-shadow: inset 0 0 0 2px var(--accent); }
+/* 고르기 전에 어떤 색인지 보이도록 작은 색 견본을 붙인다.
+   견본은 '그 테마의 모습'이라 지금 테마와 상관없이 색을 고정해 둔다 */
 .theme-swatch {
   flex: 0 0 auto;
-  width: 40px; height: 30px;
-  border: 1px solid var(--line);
+  display: flex; flex-direction: column;
+  width: 64px; height: 44px;
+  border: 1px solid var(--rule);
   border-radius: 0;
   overflow: hidden;
 }
-.theme-swatch b { display: block; height: 9px; background: var(--navy); }
+.theme-swatch b { display: block; height: 11px; border-bottom: 2px solid #201e1d; }
+.theme-swatch::after { content: ""; width: 12px; height: 12px; margin: 6px 0 0 6px; background: #ec3013; }
 .theme-swatch.light { background: #f3f2f2; }
-.theme-swatch.dark  { background: #2d2b2b; }
+.theme-swatch.dark  { background: #201e1d; }
+.theme-swatch.dark b { border-bottom-color: #f3f2f2; }
 .theme-name { flex: 1 1 auto; display: flex; flex-direction: column; gap: 2px; }
-.theme-name b     { font-size: 14px; }
-.theme-name small { font-size: 11.5px; color: var(--text-dim); }
+.theme-name b     { font-size: 14.5px; font-weight: 800; }
+.theme-name small { font-size: 12px; color: var(--text-dim); }
 /* 고른 것에만 체크 표시. 기기마다 모양이 달라지지 않도록 글자(✓) 대신 그림으로 그린다 */
-.theme-check { flex: 0 0 auto; color: var(--accent-text); visibility: hidden; }
+.theme-check { flex: 0 0 auto; color: var(--accent); visibility: hidden; }
 .theme-btn.is-on .theme-check { visibility: visible; }
 .theme-check svg { display: block; }
 
 /* ── AI 칸 (설정) ─────────────────────────── */
-.ai-settings { flex: 1 1 auto; overflow-y: auto; padding: 6px 18px 18px; }
+.ai-settings { flex: 1 1 auto; overflow-y: auto; padding: 6px 22px 18px; }
 .ai-field { display: flex; flex-direction: column; gap: 6px; }
-.ai-field-name { font-size: 12.5px; font-weight: 700; color: var(--text-dim); }
+.ai-field-name { font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--text-dim); }
 .ai-field input {
-  height: 40px;
-  padding: 0 10px;
-  border: 1px solid var(--line); border-radius: 0;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--rule); border-radius: 0;
   background: var(--field-bg); color: var(--text);
   font-size: 14px; font-family: inherit;
 }
 .ai-field input:focus { outline: 2px solid var(--accent); border-color: transparent; }
-.ai-help { margin: 10px 0 0; font-size: 12px; line-height: 1.65; color: var(--text-dim); }
+.ai-help { margin: 12px 0 0; font-size: 12.5px; line-height: 1.7; color: var(--text-dim); }
+.ai-help b { color: var(--text); }
 .ai-tools {
   display: flex; align-items: center; gap: 10px;
-  margin-top: 16px; padding-top: 14px;
-  border-top: 1px solid var(--line);
+  margin-top: 18px; padding-top: 14px;
+  border-top: 2px solid var(--rule);
 }
-.ai-saved-count { flex: 1 1 auto; font-size: 12px; color: var(--text-dim); }
+.ai-saved-count { flex: 1 1 auto; font-size: 12.5px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
 
 /* ── Backup 칸 (설정) ─────────────────────── */
-.backup-step + .backup-step { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); }
-.backup-step > b { font-size: 13.5px; }
+/* 왼쪽에 큰 번호(01·02)를 세우고 제목·설명·버튼은 오른쪽 한 칸에 쌓는다 */
+.backup-step {
+  display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 0 8px;
+  padding: 14px 0 18px;
+  border-top: 2px solid var(--rule);
+}
+.backup-step > :not(.backup-no) { grid-column: 2; }
+.backup-no { grid-column: 1; grid-row: 1 / span 3; font-size: 22px; font-weight: 800; line-height: 1; color: var(--accent); }
+.backup-step > b { font-size: 14.5px; font-weight: 800; }
+.backup-step .ai-help { margin-top: 6px; }
 .backup-tools { display: flex; align-items: center; gap: 10px; margin-top: 14px; }
 .backup-state { flex: 1 1 auto; min-width: 0; font-size: 12px; line-height: 1.4; color: var(--text-dim); word-break: break-all; }
 

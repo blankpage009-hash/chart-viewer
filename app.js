@@ -231,6 +231,8 @@ const state = {
 
 /* 설정 창 Files 칸에서 체크해 둔 파일 이름들 */
 const selectedFiles = new Set();
+/* Files 칸에서 펼쳐 둔 공항(ICAO). 차트를 넣고 지울 때 목록을 다시 그려도 펼친 상태가 남도록 밖에 둔다 */
+const fileOpen = new Set();
 
 function newPane() {
   return {
@@ -1894,27 +1896,72 @@ function filteredFiles() {
   return CHARTS.filter(c => matches(c, q) || c.file.toLowerCase().includes(q));
 }
 
+/* Files 칸은 공항별로 접어 둔다. 차트가 천 장이 넘어서 평평한 목록으로는 원하는 공항을 찾기 어려웠다.
+   접힌 공항의 차트 줄은 아예 그리지 않는다 — 천 줄을 매번 그리면 아이패드에서 탭이 굼떠진다 */
+function fileRowHtml(c) {
+  const on = selectedFiles.has(c.file);
+  return `
+    <label class="file-row${on ? ' is-picked' : ''}">
+      <input type="checkbox" class="sq-check" data-file="${esc(c.file)}"${on ? ' checked' : ''}>
+      <span class="badge badge-${c.type}">${esc(c.type === 'ETC' ? (c.rawType || 'ETC') : c.type)}</span>
+      <span class="file-info">
+        <span class="file-main"><b class="file-no">${esc(c.no)}</b>${esc(c.title)}</span>
+        <span class="file-sub">${esc(c.file)}</span>
+      </span>
+      <span class="file-size">${fmtSize(c.size || 0)}</span>
+    </label>`;
+}
+
+function fileGroupHtml(icao, charts) {
+  const apt = airports[icao] || {};
+  const label = [apt.name, apt.country].filter(Boolean).join(' · ');
+  const bytes = charts.reduce((sum, c) => sum + (c.size || 0), 0);
+  const open = fileOpen.has(icao);
+  // 머리줄 전체를 label 로 감싸지 않는다 — 그러면 펼치려고 누른 곳까지 체크가 바뀐다.
+  // 체크 칸과 펼치기 버튼을 따로 둔다
+  return `
+    <div class="file-group${open ? ' is-open' : ''}" data-group="${esc(icao)}">
+      <div class="file-group-head">
+        <label class="file-group-check" title="이 공항 전체 선택">
+          <input type="checkbox" class="sq-check" data-group-check="${esc(icao)}">
+        </label>
+        <button class="file-group-toggle" data-group-toggle="${esc(icao)}">
+          <svg class="file-chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2.25" stroke-linecap="square" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+          <span class="file-group-icao">${esc(icao)}</span>
+          <span class="file-group-name${label ? '' : ' is-empty'}">${esc(label || '이름 미입력')}</span>
+          <span class="file-group-meta">${charts.length}개 · ${fmtSize(bytes)}</span>
+        </button>
+      </div>
+      ${open ? charts.map(fileRowHtml).join('') : ''}
+    </div>`;
+}
+
 function renderFileTable() {
   // 지워진 파일이 선택 상태로 남아 있지 않게 정리한다
   selectedFiles.forEach(f => { if (!CHARTS.some(c => c.file === f)) selectedFiles.delete(f); });
 
   const list = filteredFiles();
+  const grouped = groupByAirport(list);
+  // 공항이 하나뿐이면 접어 둘 이유가 없다
+  if (grouped.size === 1) grouped.forEach((_, icao) => fileOpen.add(icao));
+
   const box = $('#file-table');
   box.innerHTML = list.length
-    ? list.map(c => `
-        <label class="file-row">
-          <input type="checkbox" data-file="${esc(c.file)}"${selectedFiles.has(c.file) ? ' checked' : ''}>
-          <span class="badge badge-${c.type}">${esc(c.type === 'ETC' ? (c.rawType || 'ETC') : c.type)}</span>
-          <span class="file-info">
-            <span class="file-main">${esc(c.icao)} ${esc(c.no)} ${esc(c.title)}</span>
-            <span class="file-sub">${esc(c.file)}</span>
-          </span>
-          <span class="file-size">${fmtSize(c.size || 0)}</span>
-        </label>`).join('')
+    ? [...grouped].map(([icao, charts]) => fileGroupHtml(icao, charts)).join('')
     : (CHARTS.length
         ? '<p class="empty-note">찾는 차트가 없습니다. 검색어를 확인해보세요.</p>'
         : '<p class="empty-note">아직 넣어둔 차트가 없습니다.<br>오른쪽 위 <b>Upload</b> 를 눌러 차트를 넣어주세요.</p>');
 
+  updateFileTools();
+}
+
+/* 공항 하나만 다시 그린다. 펼치고 접을 때 전체를 다시 그리면 스크롤 위치가 튄다 */
+function rerenderFileGroup(icao) {
+  const el = $$('#file-table [data-group]').find(g => g.dataset.group === icao);
+  if (!el) return;
+  const charts = filteredFiles().filter(c => c.icao === icao);
+  el.outerHTML = fileGroupHtml(icao, charts);
   updateFileTools();
 }
 
@@ -1937,32 +1984,85 @@ function updateFileTools() {
   const all = $('#file-all');
   all.checked = list.length > 0 && picked === list.length;
   all.indeterminate = picked > 0 && picked < list.length;
+
+  // 반쯤 선택(indeterminate)은 HTML 로 적을 수 없어서, 선택이 바뀔 때마다 여기서 다시 맞춘다
+  const grouped = groupByAirport(list);
+  $$('#file-table [data-group-check]').forEach(box => {
+    const charts = grouped.get(box.dataset.groupCheck) || [];
+    const n = charts.filter(c => selectedFiles.has(c.file)).length;
+    box.checked = n > 0 && n === charts.length;
+    box.indeterminate = n > 0 && n < charts.length;
+  });
+
+  const expand = $('#btn-file-expand');
+  const allOpen = grouped.size > 0 && [...grouped.keys()].every(icao => fileOpen.has(icao));
+  expand.textContent = allOpen ? '모두 접기' : '모두 펼치기';
+  expand.disabled = grouped.size < 2;
 }
 
 $('#file-table').addEventListener('change', e => {
+  const groupBox = e.target.closest('[data-group-check]');
+  if (groupBox) {
+    const icao = groupBox.dataset.groupCheck;
+    filteredFiles().filter(c => c.icao === icao).forEach(c => {
+      if (groupBox.checked) selectedFiles.add(c.file); else selectedFiles.delete(c.file);
+    });
+    const group = groupBox.closest('[data-group]');
+    group.querySelectorAll('[data-file]').forEach(box => {
+      box.checked = groupBox.checked;
+      box.closest('.file-row').classList.toggle('is-picked', groupBox.checked);
+    });
+    updateFileTools();
+    return;
+  }
   const box = e.target.closest('[data-file]');
   if (!box) return;
   if (box.checked) selectedFiles.add(box.dataset.file);
   else selectedFiles.delete(box.dataset.file);
+  box.closest('.file-row').classList.toggle('is-picked', box.checked);
   updateFileTools();
+});
+
+$('#file-table').addEventListener('click', e => {
+  const btn = e.target.closest('[data-group-toggle]');
+  if (!btn) return;
+  const icao = btn.dataset.groupToggle;
+  if (fileOpen.has(icao)) fileOpen.delete(icao); else fileOpen.add(icao);
+  rerenderFileGroup(icao);
+});
+
+$('#btn-file-expand').addEventListener('click', () => {
+  const icaos = [...groupByAirport(filteredFiles()).keys()];
+  const allOpen = icaos.every(icao => fileOpen.has(icao));
+  fileOpen.clear();
+  if (!allOpen) icaos.forEach(icao => fileOpen.add(icao));
+  renderFileTable();
 });
 
 $('#file-all').addEventListener('change', e => {
   selectedFiles.clear();
   if (e.target.checked) filteredFiles().forEach(c => selectedFiles.add(c.file));
-  $$('#file-table [data-file]').forEach(box => { box.checked = e.target.checked; });
+  $$('#file-table [data-file]').forEach(box => {
+    box.checked = e.target.checked;
+    box.closest('.file-row').classList.toggle('is-picked', e.target.checked);
+  });
   updateFileTools();
 });
 
 /* 검색어를 바꾸면 골라 둔 것을 푼다.
-   안 보이는 차트가 선택된 채로 남아 있다가 같이 지워지는 사고를 막기 위함이다 */
+   안 보이는 차트가 선택된 채로 남아 있다가 같이 지워지는 사고를 막기 위함이다.
+   찾는 중에는 걸린 공항을 전부 펼친다 — 접혀 있으면 공항 머리줄만 보여서 무엇이 걸렸는지 모른다 */
 $('#file-search').addEventListener('input', () => {
   selectedFiles.clear();
+  fileOpen.clear();
+  if ($('#file-search').value.trim())
+    groupByAirport(filteredFiles()).forEach((_, icao) => fileOpen.add(icao));
   renderFileTable();
 });
 $('#btn-file-search-clear').addEventListener('click', () => {
   $('#file-search').value = '';
   selectedFiles.clear();
+  fileOpen.clear();
   renderFileTable();
   $('#file-search').focus();
 });
@@ -1978,6 +2078,7 @@ function showTab(name) {
 function openSettings(tab = 'airport') {
   $('#file-search').value = '';        // 지난번 검색어가 남아 차트가 안 보이는 일이 없게
   selectedFiles.clear();
+  fileOpen.clear();
   renderAirportTable();
   renderFileTable();
   renderThemeTab();
