@@ -123,6 +123,26 @@ async function putFile(file) {
   });
 }
 
+/* 한 번에 묶어 넣을 장수. 너무 크게 잡으면 그만큼 한꺼번에 메모리에 올라간다 */
+const PUT_CHUNK = 20;
+
+/* 여러 장을 한 번에 넣는다. 한 장씩 넣으면 창고 문을 여닫는 일만 그 횟수만큼 생겨
+   1000장이 넘는 백업을 되돌릴 때 몇 배로 느려진다 */
+async function putFiles(files) {
+  const d = await db();
+  return new Promise((resolve, reject) => {
+    const t = d.transaction([S_FILES, S_META], 'readwrite');
+    const now = Date.now();
+    for (const f of files) {
+      t.objectStore(S_FILES).put({ name: f.name, blob: f });
+      t.objectStore(S_META).put({ name: f.name, size: f.size, addedAt: now });
+    }
+    t.oncomplete = () => resolve();
+    t.onerror    = () => reject(t.error);
+    t.onabort    = () => reject(t.error);
+  });
+}
+
 async function getFile(name) {
   const d = await db();
   return req(d.transaction(S_FILES, 'readonly').objectStore(S_FILES).get(name));
@@ -961,19 +981,32 @@ async function addFiles(fileList) {
 
   const known = new Set(CHARTS.map(c => c.file));
   let added = 0, replaced = 0, failed = 0, full = false;
+  const count = f => { known.has(f.name) ? replaced++ : added++; };
 
-  for (const f of files) {
-    busy(`차트를 넣는 중…  ${added + replaced + failed + 1} / ${files.length}`);
+  await keepAwake(true);          // 넣는 동안 화면이 꺼져 작업이 멈추지 않게
+  for (let i = 0; i < files.length; i += PUT_CHUNK) {
+    const group = files.slice(i, i + PUT_CHUNK);
+    busy(`차트를 넣는 중…  ${i + group.length} / ${files.length}`);
     try {
-      await putFile(f);
-      known.has(f.name) ? replaced++ : added++;
+      await putFiles(group);
+      group.forEach(count);
     } catch (err) {
       console.error(err);
       // 저장 공간이 꽉 찼으면 나머지도 어차피 안 들어가므로 멈춘다
       if (err?.name === 'QuotaExceededError') { full = true; break; }
-      failed++;
+      // 묶음이 통째로 실패했으면 한 장씩 다시 해 본다 (한 장이 문제여서 스무 장을 잃지 않게)
+      for (const f of group) {
+        try { await putFile(f); count(f); }
+        catch (e2) {
+          console.error(e2);
+          if (e2?.name === 'QuotaExceededError') { full = true; break; }
+          failed++;
+        }
+      }
+      if (full) break;
     }
   }
+  await keepAwake(false);
 
   busy(null);
   await refreshLibrary();
@@ -1560,10 +1593,11 @@ async function restoreBackup(file) {
                '지금 넣어둔 차트는 지우지 않고 되돌립니다.\n' +
                '같은 이름의 차트는 백업 쪽으로 바뀝니다.\n\n불러올까요?')) return;
 
-  busy('백업에서 차트를 꺼내는 중…');
+  await keepAwake(true);          // 1000장이 넘으면 오래 걸린다. 화면이 꺼지면 중간에 멈춘다
   const byZipName = new Map(index.map(e => [e.name, e]));
   const files = [];
   for (const item of list) {
+    busy(`백업에서 차트를 꺼내는 중…  ${files.length + 1} / ${list.length}`);
     const e = byZipName.get(item.zip);
     if (!e || !item.file) continue;
     try {
@@ -1597,6 +1631,7 @@ async function restoreBackup(file) {
   }
   renderAiTab();
   renderBackupTab();
+  await keepAwake(false);
 }
 
 /* ── 10. 화면 연결 ────────────────────────────────────────────── */
@@ -1982,6 +2017,7 @@ $('#btn-ai-clear').addEventListener('click', () => {
 /* 설정 창 — Backup 칸 (백업 만들기 · 불러오기) */
 $('#btn-backup-make').addEventListener('click', async () => {
   if (!CHARTS.length) return;
+  await keepAwake(true);          // 차트가 많으면 몇 분 걸린다. 그동안 화면이 꺼지면 멈춘다
   try {
     const { zip, count } = await buildBackup();
     backupBlob = zip;
@@ -1993,6 +2029,8 @@ $('#btn-backup-make').addEventListener('click', async () => {
     busy(null);
     console.error(err);
     toast('백업을 만들지 못했습니다. 저장 공간이 모자라지 않은지 확인해 주세요.');
+  } finally {
+    await keepAwake(false);
   }
 });
 
@@ -2047,6 +2085,34 @@ window.addEventListener('resize', () => {
 });
 
 /* ── 11. 잔심부름 ─────────────────────────────────────────────── */
+
+/* 오래 걸리는 일(백업 만들기·되돌리기·차트 넣기) 동안 화면이 저절로 꺼지지 않게 붙잡는다.
+   아이패드는 화면이 꺼지면 앱을 재워 버려서 하던 일이 중간에 멈춘다.
+   여러 일이 겹쳐 돌 수 있으므로 숫자를 세어 마지막 하나가 끝날 때 놓아 준다 */
+let awakeCount = 0;
+let wakeLock = null;
+
+async function grabWakeLock() {
+  if (wakeLock) return;
+  try {
+    wakeLock = (await navigator.wakeLock?.request('screen')) ?? null;
+    wakeLock?.addEventListener?.('release', () => { wakeLock = null; });
+  } catch { /* 안 되는 기기(예전 아이패드)면 그냥 넘어간다. 대신 자동 잠금을 꺼 두면 된다 */ }
+}
+
+async function keepAwake(on) {
+  awakeCount = Math.max(0, awakeCount + (on ? 1 : -1));
+  if (awakeCount > 0) return grabWakeLock();
+  const lock = wakeLock;
+  wakeLock = null;
+  try { await lock?.release(); } catch { /* 이미 풀렸으면 그만 */ }
+}
+
+/* 화면이 잠겼다 돌아오면 붙잡아 둔 것이 저절로 풀린다. 아직 일이 남아 있으면 다시 붙잡는다 */
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && awakeCount > 0) grabWakeLock();
+});
+
 let toastTimer;
 function toast(html) {
   const el = $('#toast');
