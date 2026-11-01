@@ -4,7 +4,7 @@
 
 /* ★★ 앱을 고쳐서 다시 올릴 때는 아래 번호를 1 올릴 것 (ncv-v1 → ncv-v2).
        안 올리면 아이패드가 예전 화면을 계속 쓴다. ★★ */
-const CACHE = 'ncv-v45';  // v45: 되돌리다 잘못돼도 화면 붙잡은 것을 반드시 놓아 주도록
+const CACHE = 'ncv-v46';  // v46: 시안 2번 색·글꼴 바탕 (먹색·빨강, 모서리 0, Archivo)
 // (예: ILS DA(H) 238 ft (200 ft)) (2026-08-08)
 
 const APP_FILES = [
@@ -15,6 +15,7 @@ const APP_FILES = [
   './manifest.webmanifest',
   './icon.png',
   './jeppesen_icon.png',
+  './archivo-latin.woff2',
   './pdfjs/pdf.min.mjs',
   './pdfjs/pdf.worker.min.mjs'
 ];

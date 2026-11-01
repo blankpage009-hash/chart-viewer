@@ -1,58 +1,84 @@
+/* ── 글꼴 ─────────────────────────────────── */
+/* Archivo 는 가변 글꼴 한 파일이 굵기 400·600·800 을 다 맡는다. 한글 글자는 이 파일에 없으므로
+   선언하지 않고 아래 font-family 목록의 기기 기본 글꼴로 자연스럽게 넘어간다 */
+@font-face {
+  font-family: "Archivo";
+  src: url("archivo-latin.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* ── 공통 값 ──────────────────────────────── */
+/* 시안 2번(Modernist). 변수 이름은 예전(네이비 시절) 그대로 두고 값만 갈아끼웠다 —
+   이름을 바꾸면 이 파일 1000줄을 전부 고쳐야 해서다. --navy 는 이제 '먹색'이다 */
 :root {
-  --navy:        #14304f;
-  --navy-dark:   #0d2238;
-  --accent:      #2f7fd4;
-  --line:        #d5dce4;
-  --bg:          #eef1f5;
-  --panel:       #ffffff;
-  --text:        #1c2733;
-  --text-dim:    #667487;
-  --star:        #f0a419;
+  --navy:        #201e1d;   /* 상단 바 (밝게·어둡게 둘 다 먹색) */
+  --accent:      #ec3013;   /* 켜진 버튼·선택 표시의 빨강 */
+  --accent-text: #ae1800;   /* 빨강 '글자'는 바탕에서 읽히도록 더 진한 색을 쓴다 */
+  --line:        color-mix(in srgb, #201e1d 13%, transparent);
+  --rule:        color-mix(in srgb, #201e1d 40%, transparent);   /* 굵은 구분선(2단계에서 씀) */
+  --bg:          #f3f2f2;
+  --panel:       #f8f4f4;
+  --text:        #201e1d;
+  --text-dim:    #605d5d;
+  --star:        #ec3013;
   --topbar-h:    50px;
   --sidebar-w:   290px;
 
   /* 잔 색들도 변수로 둔다. 다크 테마에서 이 값들만 갈아끼우면 화면 전체 색이 한 번에 바뀐다 */
-  --head-bg:     #e3ebf4;   /* Favorite·Result 제목줄 */
-  --count-bg:    #dbe2ea;   /* 제목줄의 개수 알약 */
-  --apt-bg:      #fbfcfd;   /* 공항 코드 + 종류 필터 줄 */
-  --row-hover:   #f2f6fa;
-  --row-open:    #e4eefa;   /* 지금 열려 있는 차트 줄 */
-  --row-line:    #f0f3f6;   /* 줄 사이 얇은 선 */
-  --chip-bg:     #e9edf2;
-  --chip-hover:  #dde3ea;
-  --btn-hover:   #e7ecf2;
-  --bar-bg:      #f6f8fa;   /* 차트 칸 위쪽 제목 줄 */
-  --stage-bg:    #dfe4ea;   /* 차트 종이 뒤 바탕 */
-  --field-bg:    #ffffff;   /* 글자 넣는 칸 */
-  --tab-on-bg:   #e8f0fb;
-  --star-off:    #c3ccd6;
+  --head-bg:     #eae9e9;   /* Pinboards·Airport·Charts 제목줄 */
+  --count-bg:    #d7d3d3;   /* 제목줄의 개수 알약 */
+  --apt-bg:      #f8f4f4;   /* 공항 코드 + 종류 필터 줄 */
+  --row-hover:   color-mix(in srgb, #201e1d 6%, transparent);
+  --row-open:    #ffe0d9;   /* 지금 열려 있는 차트 줄 */
+  --row-line:    color-mix(in srgb, #201e1d 13%, transparent);   /* 줄 사이 얇은 선 */
+  --chip-bg:     #eae9e9;
+  --chip-hover:  #d7d3d3;
+  --btn-hover:   color-mix(in srgb, #201e1d 6%, transparent);
+  --bar-bg:      #eae9e9;   /* 차트 칸 위쪽 제목 줄 */
+  --stage-bg:    #d7d3d3;   /* 차트 종이 뒤 바탕 */
+  --field-bg:    #eae9e9;   /* 글자 넣는 칸 */
+  --tab-on-bg:   #ffe0d9;
+  --star-off:    #bab6b6;
+  --scrim:       color-mix(in srgb, #2d2b2b 50%, transparent);   /* 창 뒤 어둡게 */
+  --modal-shadow: 0 12px 32px color-mix(in srgb, #2d2b2b 22%, transparent);
+  --paper-shadow: 0 3px 10px color-mix(in srgb, #2d2b2b 16%, transparent);
+  --toast-bg:    #201e1d;
+  --toast-fg:    #f3f2f2;
   /* 체크상자·스크롤막대처럼 브라우저가 직접 그리는 부분도 테마에 맞춰 그려지게 한다 */
   color-scheme: light;
 }
 
-/* 다크 테마 — 상단 바와 같은 네이비 계열로 화면 전체를 맞춘다.
+/* 다크 테마 — 먹색 계열로 화면 전체를 맞춘다.
    차트 그림(캔버스)만은 원본 그대로 흰 종이로 둔다 */
 :root[data-theme="dark"] {
-  --line:        #2a4a70;
-  --bg:          #0b1d31;
-  --panel:       #14304f;
-  --text:        #e9eff6;
-  --text-dim:    #a3b6cb;
-  --head-bg:     #1c3f66;
-  --count-bg:    #27496f;
-  --apt-bg:      #173458;
-  --row-hover:   #1d436d;
-  --row-open:    #24568a;
-  --row-line:    #1e3d5f;
-  --chip-bg:     #22456c;
-  --chip-hover:  #2b5583;
-  --btn-hover:   #22456c;
-  --bar-bg:      #173458;
-  --stage-bg:    #0b1d31;
-  --field-bg:    #0f2740;
-  --tab-on-bg:   #1d4573;
-  --star-off:    #6d829a;
+  --accent-text: #ff9783;
+  --line:        color-mix(in srgb, #f3f2f2 12%, transparent);
+  --rule:        color-mix(in srgb, #f3f2f2 32%, transparent);
+  --bg:          #201e1d;
+  --panel:       #2d2b2b;
+  --text:        #f3f2f2;
+  --text-dim:    #bab6b6;
+  --head-bg:     color-mix(in srgb, #f3f2f2 6%, #2d2b2b);
+  --count-bg:    color-mix(in srgb, #f3f2f2 12%, #2d2b2b);
+  --apt-bg:      #2d2b2b;
+  --row-hover:   color-mix(in srgb, #f3f2f2 7%, transparent);
+  --row-open:    color-mix(in srgb, #ec3013 24%, #2d2b2b);
+  --row-line:    color-mix(in srgb, #f3f2f2 12%, transparent);
+  --chip-bg:     color-mix(in srgb, #f3f2f2 6%, #2d2b2b);
+  --chip-hover:  color-mix(in srgb, #f3f2f2 12%, #2d2b2b);
+  --btn-hover:   color-mix(in srgb, #f3f2f2 7%, transparent);
+  --bar-bg:      color-mix(in srgb, #f3f2f2 6%, #2d2b2b);
+  --stage-bg:    #201e1d;
+  --field-bg:    #201e1d;
+  --tab-on-bg:   color-mix(in srgb, #ec3013 24%, #2d2b2b);
+  --star-off:    #7d7979;
+  --scrim:       color-mix(in srgb, #000000 55%, transparent);
+  --modal-shadow: 0 0 0 1px color-mix(in srgb, #f3f2f2 14%, transparent), 0 12px 32px rgba(0,0,0,.5);
+  --paper-shadow: 0 3px 14px rgba(0,0,0,.45);
+  --toast-bg:    #f3f2f2;
+  --toast-fg:    #201e1d;
   color-scheme: dark;
 }
 
@@ -78,11 +104,13 @@ html, body {
   flex-direction: column;           /* 상단바 높이가 늘어도 본문이 알아서 맞춰지도록 */
   background: var(--bg);
   color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Malgun Gothic", sans-serif;
+  font-family: "Archivo", -apple-system, BlinkMacSystemFont, "Segoe UI", "Malgun Gothic", sans-serif;
+  font-variant-numeric: tabular-nums;   /* 숫자 폭을 맞춰 목록의 번호가 흔들리지 않게 */
   -webkit-text-size-adjust: 100%;
 }
 
-button { font-family: inherit; cursor: pointer; }
+button, input { font-family: inherit; font-variant-numeric: inherit; }
+button { cursor: pointer; }
 
 /* ── 상단 바 ──────────────────────────────── */
 .topbar {
@@ -96,9 +124,16 @@ button { font-family: inherit; cursor: pointer; }
   padding: env(safe-area-inset-top) calc(12px + env(safe-area-inset-right))
            0 calc(12px + env(safe-area-inset-left));
   background: var(--navy);
-  color: #fff;
+  color: #f3f2f2;
   position: relative;
   z-index: 40;
+  /* 상단 바는 테마와 상관없이 먹색이라, 안쪽 글자·검색칸은 어둡게 칸 값을 쓴다.
+     변수를 여기서 다시 정하면 안에 든 검색칸·지우기 버튼이 따로 손대지 않아도 따라온다 */
+  --text:        #f3f2f2;
+  --text-dim:    #bab6b6;
+  --field-bg:    #201e1d;
+  --btn-hover:   color-mix(in srgb, #f3f2f2 7%, transparent);
+  --accent-text: #ff9783;
 }
 
 /* 로고 자체가 '처음 상태로' 버튼이다. mix-blend-mode 가 상단 바와 섞여야 하므로
@@ -118,7 +153,7 @@ button { font-family: inherit; cursor: pointer; }
   width: auto;
   display: block;
   /* 로고 원본은 흰 바탕에 검은 글자다. 색을 반전(검은 글자→흰 글자, 흰 바탕→검은 바탕)한 뒤
-     screen 방식으로 겹치면, 검게 된 바탕은 남색과 섞여 사라지고 흰 글자만 남는다 */
+     screen 방식으로 겹치면, 검게 된 바탕은 먹색과 섞여 사라지고 흰 글자만 남는다 */
   filter: invert(1);
   mix-blend-mode: screen;
 }
@@ -127,9 +162,9 @@ button { font-family: inherit; cursor: pointer; }
   min-width: 40px;
   height: 40px;
   border: 0;
-  border-radius: 8px;
+  border-radius: 0;
   background: rgba(255,255,255,.12);
-  color: #fff;
+  color: #f3f2f2;
   font-size: 17px;
   line-height: 1;
   /* 아이콘을 글자 정렬이 아니라 칸 정중앙에 고정시켜, 기기마다 위치가 다르게 보이지 않게 한다 */
@@ -156,7 +191,7 @@ button { font-family: inherit; cursor: pointer; }
   height: 40px;
   padding: 0 14px;
   border: 0;
-  border-radius: 8px;
+  border-radius: 0;
   background: rgba(255,255,255,.12);
   color: #fff;
   font-size: 14px;
@@ -164,7 +199,7 @@ button { font-family: inherit; cursor: pointer; }
 }
 .text-btn:hover { background: rgba(255,255,255,.22); }
 .text-btn.primary { background: var(--accent); }
-.text-btn.primary:hover { background: #3a8ee2; }
+.text-btn.primary:hover { background: #f0482e; }
 
 /* 검색창 */
 .search-wrap { position: relative; flex: 0 1 195px; min-width: 135px; max-width: 360px; }
@@ -172,8 +207,8 @@ button { font-family: inherit; cursor: pointer; }
   width: 100%;
   height: 40px;
   padding: 0 34px 0 14px;
-  border: 0;
-  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, #f3f2f2 32%, transparent);
+  border-radius: 0;
   background: var(--field-bg);
   color: var(--text);
   font-size: 15px;
@@ -183,7 +218,7 @@ input::placeholder { color: var(--text-dim); }
 .clear-btn {
   position: absolute; right: 4px; top: 4px;
   width: 32px; height: 32px;
-  border: 0; border-radius: 6px;
+  border: 0; border-radius: 0;
   background: transparent; color: var(--text-dim); font-size: 19px;
 }
 .clear-btn:hover { background: var(--btn-hover); }
@@ -217,9 +252,10 @@ input::placeholder { color: var(--text-dim); }
   height: 29px;            /* 검색창(34px)보다 조금 낮게 */
   padding: 0;
   border: 0;
-  border-radius: 7px;
-  background: rgba(255,255,255,.12);
-  color: #fff;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, #f3f2f2 12%, transparent);
+  color: #f3f2f2;
   font-size: 12px;
   font-weight: 700;
   letter-spacing: .2px;
@@ -237,7 +273,7 @@ input::placeholder { color: var(--text-dim); }
    나란히 보기가 켜진 상태(.is-on)는 바탕 대신 글자색(파랑)으로 표시한다 */
 .top-actions .icon-btn { background: transparent; }
 .top-actions .icon-btn:hover { background: rgba(255,255,255,.14); }
-.top-actions .icon-btn.is-on { background: transparent; color: var(--accent); }
+.top-actions .icon-btn.is-on { background: transparent; color: var(--accent-text); }
 
 /* 상단 바 버튼·검색창은 차트가 더 넓게 보이도록 낮게 맞춘다 (공항 정보 창의 버튼은 그대로) */
 .topbar .icon-btn,
@@ -333,7 +369,7 @@ input::placeholder { color: var(--text-dim); }
 .section-head .count {
   margin-left: auto;
   padding: 1px 7px;
-  border-radius: 9px;
+  border-radius: 0;
   background: var(--count-bg);
   color: var(--text-dim);
   font-size: 11px;
@@ -387,7 +423,7 @@ input::placeholder { color: var(--text-dim); }
   flex: 0 0 auto;
   width: 34px; height: 34px;
   margin-right: 6px;
-  border: 0; border-radius: 6px;
+  border: 0; border-radius: 0;
   background: transparent;
   color: var(--star-off);
   display: flex;
@@ -447,7 +483,7 @@ input::placeholder { color: var(--text-dim); }
   height: 22px;
   padding: 0 2px;
   border: 0;
-  border-radius: 5px;
+  border-radius: 0;
   background: var(--chip-bg);
   color: var(--text-dim);
   font-size: 10px;
@@ -488,7 +524,7 @@ input::placeholder { color: var(--text-dim); }
   flex: 0 0 auto;
   min-width: 44px;
   padding: 3px 5px;
-  border-radius: 5px;
+  border-radius: 0;
   color: #fff;
   font-size: 10px;
   font-weight: 700;
@@ -496,7 +532,7 @@ input::placeholder { color: var(--text-dim); }
   letter-spacing: .4px;
 }
 .chart-meta  { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
-.chart-no    { font-size: 12px; font-weight: 700; color: var(--accent); }
+.chart-no    { font-size: 12px; font-weight: 700; color: var(--accent-text); }
 .chart-title { font-size: 12.5px; line-height: 1.35; word-break: break-word; }
 
 /* 차트를 지우는 일은 설정 창의 Files 칸에서만 한다 (목록의 휴지통 버튼은 없앴다) */
@@ -504,7 +540,7 @@ input::placeholder { color: var(--text-dim); }
   flex: 0 0 auto;
   width: 32px; height: 34px;
   margin-right: 4px;
-  border: 0; border-radius: 6px;
+  border: 0; border-radius: 0;
   background: transparent;
   color: var(--star-off);
   display: flex;
@@ -545,7 +581,7 @@ input::placeholder { color: var(--text-dim); }
   display: flex;
   flex-direction: column;
   border: 2px solid transparent;
-  border-radius: 10px;
+  border-radius: 0;
   background: var(--panel);
   overflow: hidden;
   /* 홈 인디케이터 자리를 칸 안쪽 맨 아래에 이 칸 배경색(panel)으로 확보한다.
@@ -579,7 +615,7 @@ input::placeholder { color: var(--text-dim); }
 .icao-badge {
   flex: 0 0 auto;
   padding: 2px 6px;
-  border-radius: 4px;
+  border-radius: 0;
   background: #fff;
   color: #111;
   font-size: 11px;
@@ -631,7 +667,7 @@ input::placeholder { color: var(--text-dim); }
 .chart-canvas {
   display: block;
   background: #fff;
-  box-shadow: 0 2px 10px rgba(20, 40, 60, .22);
+  box-shadow: var(--paper-shadow);
 }
 
 .chart-placeholder {
@@ -649,15 +685,15 @@ input::placeholder { color: var(--text-dim); }
 .busy {
   position: fixed; inset: 0; z-index: 70;
   display: flex; align-items: center; justify-content: center;
-  background: rgba(14, 28, 44, .4);
+  background: var(--scrim);
 }
 .busy-box {
   padding: 18px 26px;
-  border-radius: 10px;
+  border-radius: 0;
   background: var(--panel);
   color: var(--text);
   font-size: 14px;
-  box-shadow: 0 8px 26px rgba(0,0,0,.25);
+  box-shadow: var(--modal-shadow);
 }
 
 /* ── 설정 창 ──────────────────────────────── */
@@ -666,12 +702,13 @@ input::placeholder { color: var(--text-dim); }
   display: flex; align-items: center; justify-content: center;
   /* 상단 시계·하단 홈 인디케이터 자리를 피해서 창을 띄운다 */
   padding: calc(14px + env(safe-area-inset-top)) 14px calc(14px + env(safe-area-inset-bottom));
-  background: rgba(14, 28, 44, .5);
+  background: var(--scrim);
 }
 .modal {
+  box-shadow: var(--modal-shadow);
   width: 560px; max-width: 100%; max-height: 84vh;
   display: flex; flex-direction: column;
-  border-radius: 12px;
+  border-radius: 0;
   background: var(--panel);
   overflow: hidden;
 }
@@ -699,14 +736,14 @@ input::placeholder { color: var(--text-dim); }
   height: 36px;
   padding: 0 16px;
   border: 0;
-  border-radius: 8px 8px 0 0;
+  border-radius: 0;
   background: transparent;
   color: var(--text-dim);
   font-size: 14px;
   font-weight: 700;
 }
 .tab-btn:hover { background: var(--btn-hover); }
-.tab-btn.is-on { background: var(--tab-on-bg); color: var(--accent); box-shadow: inset 0 -2px 0 var(--accent); }
+.tab-btn.is-on { background: var(--tab-on-bg); color: var(--accent-text); box-shadow: inset 0 -2px 0 var(--accent); }
 
 /* 탭 하나가 창의 남은 높이를 다 쓰고, 그 안의 목록만 스크롤되게 한다 */
 .tab-panel { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
@@ -718,7 +755,7 @@ input::placeholder { color: var(--text-dim); }
   height: 36px;
   padding: 0 32px 0 12px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 0;
   background: var(--field-bg);
   font-size: 14px;
   font-family: inherit;
@@ -763,13 +800,13 @@ input::placeholder { color: var(--text-dim); }
 .apt-row input {
   flex: 1 1 auto; min-width: 0; height: 38px;
   padding: 0 10px;
-  border: 1px solid var(--line); border-radius: 7px;
+  border: 1px solid var(--line); border-radius: 0;
   background: var(--field-bg); color: var(--text);
   font-size: 14px; font-family: inherit;
 }
 .apt-row input:focus { outline: 2px solid var(--accent); border-color: transparent; }
 /* 목록에서 눌러 들어온 공항이 어느 줄인지 알려준다 */
-.apt-row.is-target { background: var(--row-open); border-radius: 8px; }
+.apt-row.is-target { background: var(--row-open); border-radius: 0; }
 .modal-foot { padding: 12px 18px; border-top: 1px solid var(--line); text-align: right; }
 .modal-foot .text-btn { color: #fff; }
 
@@ -783,7 +820,7 @@ input::placeholder { color: var(--text-dim); }
   width: 100%;
   padding: 10px 12px;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: 0;
   background: transparent;
   color: var(--text);
   text-align: left;
@@ -795,17 +832,17 @@ input::placeholder { color: var(--text-dim); }
   flex: 0 0 auto;
   width: 40px; height: 30px;
   border: 1px solid var(--line);
-  border-radius: 7px;
+  border-radius: 0;
   overflow: hidden;
 }
 .theme-swatch b { display: block; height: 9px; background: var(--navy); }
-.theme-swatch.light { background: #eef1f5; }
-.theme-swatch.dark  { background: #0b1d31; }
+.theme-swatch.light { background: #f3f2f2; }
+.theme-swatch.dark  { background: #2d2b2b; }
 .theme-name { flex: 1 1 auto; display: flex; flex-direction: column; gap: 2px; }
 .theme-name b     { font-size: 14px; }
 .theme-name small { font-size: 11.5px; color: var(--text-dim); }
 /* 고른 것에만 체크 표시. 기기마다 모양이 달라지지 않도록 글자(✓) 대신 그림으로 그린다 */
-.theme-check { flex: 0 0 auto; color: var(--accent); visibility: hidden; }
+.theme-check { flex: 0 0 auto; color: var(--accent-text); visibility: hidden; }
 .theme-btn.is-on .theme-check { visibility: visible; }
 .theme-check svg { display: block; }
 
@@ -816,7 +853,7 @@ input::placeholder { color: var(--text-dim); }
 .ai-field input {
   height: 40px;
   padding: 0 10px;
-  border: 1px solid var(--line); border-radius: 7px;
+  border: 1px solid var(--line); border-radius: 0;
   background: var(--field-bg); color: var(--text);
   font-size: 14px; font-family: inherit;
 }
@@ -846,11 +883,11 @@ input::placeholder { color: var(--text-dim); }
 }
 .ai-chart-name .ai-icao {
   /* 차트 그림이 테마와 상관없이 흰 종이인 것과 같은 이유로 색을 고정한다 */
-  padding: 2px 7px; border-radius: 5px;
-  background: #fff; color: #14304f;
+  padding: 2px 7px; border-radius: 0;
+  background: #fff; color: #201e1d;
   font-size: 12px; font-weight: 800; letter-spacing: .5px;
 }
-.ai-chart-name b { color: var(--accent); }
+.ai-chart-name b { color: var(--accent-text); }
 .ai-chart-name .ai-title-text { flex: 1 1 auto; min-width: 0; font-weight: 700; }
 .ai-chart-name .ai-no { font-size: 12.5px; color: var(--text-dim); }
 .ai-body {
@@ -872,7 +909,7 @@ input::placeholder { color: var(--text-dim); }
   width: calc(100% - 36px);
   margin: 14px 18px 0;
   border-collapse: separate; border-spacing: 0;
-  border: 1px solid var(--line); border-radius: 10px;
+  border: 1px solid var(--line); border-radius: 0;
   overflow: hidden;                 /* 둥근 모서리 밖으로 머리 띠가 삐져나오지 않게 */
   table-layout: fixed;
 }
@@ -885,7 +922,7 @@ input::placeholder { color: var(--text-dim); }
 /* 표 머리 띠 */
 .ai-table .ai-head th {
   background: var(--head-bg);
-  color: var(--accent);
+  color: var(--accent-text);
   font-size: 12px; font-weight: 700; letter-spacing: .3px;
 }
 /* 칸 폭은 맨 윗줄(표 머리)에서 정해진다 — table-layout: fixed 라서 아랫줄에 적으면 안 먹는다 */
@@ -906,11 +943,11 @@ input::placeholder { color: var(--text-dim); }
 .ai-table .ai-li { padding-left: 17px; position: relative; }
 .ai-table .ai-li > i {
   position: absolute; left: 0; top: 0;
-  font-style: normal; font-weight: 700; color: var(--accent);
+  font-style: normal; font-weight: 700; color: var(--accent-text);
 }
 /* 고도·주파수·속도는 눈으로 바로 찾아야 하므로 따로 띄운다 */
 .ai-table em {
-  font-style: normal; font-weight: 700; color: var(--accent);
+  font-style: normal; font-weight: 700; color: var(--accent-text);
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: .95em;
 }
@@ -935,13 +972,13 @@ input::placeholder { color: var(--text-dim); }
   transform: translateX(-50%);
   max-width: 90vw;
   padding: 12px 18px;
-  border-radius: 10px;
-  background: var(--navy-dark);
-  color: #fff;
+  border-radius: 0;
+  background: var(--toast-bg);
+  color: var(--toast-fg);
   font-size: 13.5px;
   line-height: 1.5;
   text-align: center;
-  box-shadow: 0 6px 20px rgba(0,0,0,.25);
+  box-shadow: var(--modal-shadow);
 }
 
 .sidebar-scrim { display: none; }
@@ -962,7 +999,7 @@ body.is-fullscreen .sidebar {
 body.is-fullscreen .layout:not(.sidebar-hidden) .sidebar-scrim {
   display: block;
   position: absolute; inset: 0; z-index: 20;
-  background: rgba(14,28,44,.32);
+  background: rgba(32,30,29,.32);
 }
 body.is-fullscreen .viewers {
   gap: 0;
@@ -1003,7 +1040,7 @@ body.is-fullscreen .viewer:not(.is-active) { display: none; }
   .layout:not(.sidebar-hidden) .sidebar-scrim {
     display: block;
     position: absolute; inset: 0; z-index: 20;
-    background: rgba(14,28,44,.32);
+    background: rgba(32,30,29,.32);
   }
 }
 
