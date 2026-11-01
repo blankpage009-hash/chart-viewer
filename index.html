@@ -209,7 +209,8 @@
     </main>
   </div>
 
-  <!-- ── 설정 창 (Airport = 공항 이름·국가 / Files = 넣어둔 PDF 관리) ── -->
+  <!-- ── 설정 창 (Airport = 공항 이름·국가 / Files = 넣어둔 PDF 관리 /
+         Theme = 화면 색 / AI = 제미나이 열쇠 / Backup = 차트·설정 내보내기·되돌리기) ── -->
   <div class="modal-scrim" id="settings-modal" hidden>
     <div class="modal">
       <div class="modal-head">
@@ -222,6 +223,7 @@
         <button class="tab-btn" data-tab="files">Files</button>
         <button class="tab-btn" data-tab="theme">Theme</button>
         <button class="tab-btn" data-tab="ai">AI</button>
+        <button class="tab-btn" data-tab="backup">Backup</button>
       </nav>
 
       <section class="tab-panel" data-panel="airport">
@@ -288,6 +290,40 @@
           <div class="ai-tools">
             <span class="ai-saved-count" id="ai-saved-count"></span>
             <button class="text-btn danger" id="btn-ai-clear">저장된 해석 모두 지우기</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="tab-panel" data-panel="backup" hidden>
+        <p class="modal-note">넣어둔 차트와 설정을 파일 한 개로 묶어 둡니다. 앱을 지웠다 다시 깔아도 이 파일만 있으면 되돌립니다.</p>
+        <div class="ai-settings">
+          <div class="backup-step">
+            <b>1. 백업해 두기</b>
+            <p class="ai-help">
+              차트 PDF 전부 + 즐겨찾기 · 공항 이름 · 화면 색 · AI 해석을 <b>zip 파일 한 개</b>로 묶습니다.
+              (AI 열쇠는 이 기기 밖으로 나가지 않도록 <b>넣지 않습니다</b>)<br>
+              <b>백업 파일 만들기</b> → <b>저장하기</b> 를 차례로 누르고, 공유창에서
+              <b>「파일에 저장」 → iCloud Drive</b> 를 고르세요.
+            </p>
+            <div class="backup-tools">
+              <span class="backup-state" id="backup-state"></span>
+              <button class="text-btn" id="btn-backup-make">백업 파일 만들기</button>
+              <button class="text-btn primary" id="btn-backup-save" disabled>저장하기</button>
+            </div>
+          </div>
+
+          <div class="backup-step">
+            <b>2. 되돌리기</b>
+            <p class="ai-help">
+              아이클라우드에 저장해 둔 백업 파일(zip)을 고르면 차트가 되돌아옵니다.
+              지금 넣어둔 차트는 지우지 않고, 같은 이름만 백업 쪽으로 바꿉니다.
+            </p>
+            <div class="backup-tools">
+              <span class="backup-state">차트가 많으면 몇 분 걸릴 수 있습니다</span>
+              <button class="text-btn primary" id="btn-backup-load">백업 파일 고르기</button>
+              <!-- 차트 넣기(Upload)와 섞이지 않게 파일 선택창을 따로 둔다 -->
+              <input id="backup-input" type="file" accept=".zip,application/zip" hidden>
+            </div>
           </div>
         </div>
       </section>

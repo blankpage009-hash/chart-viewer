@@ -4,7 +4,7 @@
 
 /* ★★ 앱을 고쳐서 다시 올릴 때는 아래 번호를 1 올릴 것 (ncv-v1 → ncv-v2).
        안 올리면 아이패드가 예전 화면을 계속 쓴다. ★★ */
-const CACHE = 'ncv-v41';  // v41: Pinboards 를 펼치면 즐겨찾기 목록 전체가 늘 고정되어 보이게
+const CACHE = 'ncv-v42';  // v42: 설정에 Backup 칸 추가 (차트·설정을 zip 으로 내보내고 되돌리기)
 // (예: ILS DA(H) 238 ft (200 ft)) (2026-08-08)
 
 const APP_FILES = [

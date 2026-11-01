@@ -1336,6 +1336,261 @@ function renderAiTab() {
   $('#btn-ai-clear').disabled = !n;
 }
 
+/* ── 9-1. 백업 · 불러오기 ──────────────────────────────────────
+   아이패드는 홈 화면 아이콘을 지우면 창고(IndexedDB)까지 함께 지운다.
+   그래서 차트 PDF 전부와 설정값을 zip 한 개로 묶어 아이클라우드에 내보낼 수 있게 했다.
+   zip 은 맥·윈도에서도 그냥 열리는 형식이라, 라이브러리 없이 직접 묶는다 (압축은 하지 않음 —
+   PDF 는 이미 압축돼 있어 줄지도 않고, 묶는 시간만 길어진다) */
+
+const BACKUP_FORMAT = 1;
+
+const CRC_TABLE = (() => {
+  const t = new Uint32Array(256);
+  for (let i = 0; i < 256; i++) {
+    let c = i;
+    for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+    t[i] = c >>> 0;
+  }
+  return t;
+})();
+
+/* zip 은 파일마다 검사용 숫자(CRC)를 요구한다. 틀리면 맥·윈도가 "손상된 파일"이라며 안 열어 준다 */
+function crc32(bytes) {
+  let c = 0xFFFFFFFF;
+  for (let i = 0; i < bytes.length; i++) c = CRC_TABLE[(c ^ bytes[i]) & 0xFF] ^ (c >>> 8);
+  return (c ^ 0xFFFFFFFF) >>> 0;
+}
+
+/* zip 안의 날짜는 1980년을 0으로 삼는 옛 MS-DOS 방식으로 적는다 */
+function dosDateTime(d) {
+  return {
+    time: (d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1),
+    date: ((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate()
+  };
+}
+
+async function makeZip(entries) {
+  const enc = new TextEncoder();
+  const { time, date } = dosDateTime(new Date());
+  const parts = [];      // 실제 내용. 원본 blob 을 그대로 넣어 메모리를 아낀다
+  const dir = [];        // 꼬리에 붙는 차례표
+  let offset = 0;
+
+  for (const e of entries) {
+    const name = enc.encode(e.name);
+    const buf = await e.blob.arrayBuffer();
+    const crc = crc32(new Uint8Array(buf));
+    const size = buf.byteLength;
+
+    const lh = new DataView(new ArrayBuffer(30));
+    lh.setUint32(0, 0x04034b50, true);
+    lh.setUint16(4, 20, true);
+    lh.setUint16(6, 0x0800, true);   // 파일 이름을 UTF-8로 적었다는 표시
+    lh.setUint16(8, 0, true);        // 압축 안 함
+    lh.setUint16(10, time, true);
+    lh.setUint16(12, date, true);
+    lh.setUint32(14, crc, true);
+    lh.setUint32(18, size, true);
+    lh.setUint32(22, size, true);
+    lh.setUint16(26, name.length, true);
+    lh.setUint16(28, 0, true);
+    parts.push(new Uint8Array(lh.buffer), name, e.blob);
+
+    const ch = new DataView(new ArrayBuffer(46));
+    ch.setUint32(0, 0x02014b50, true);
+    ch.setUint16(4, 20, true);
+    ch.setUint16(6, 20, true);
+    ch.setUint16(8, 0x0800, true);
+    ch.setUint16(10, 0, true);
+    ch.setUint16(12, time, true);
+    ch.setUint16(14, date, true);
+    ch.setUint32(16, crc, true);
+    ch.setUint32(20, size, true);
+    ch.setUint32(24, size, true);
+    ch.setUint16(28, name.length, true);
+    ch.setUint32(42, offset, true);
+    dir.push(new Uint8Array(ch.buffer), name);
+
+    offset += 30 + name.length + size;
+  }
+
+  const dirSize = dir.reduce((s, p) => s + p.length, 0);
+  const end = new DataView(new ArrayBuffer(22));
+  end.setUint32(0, 0x06054b50, true);
+  end.setUint16(8, entries.length, true);
+  end.setUint16(10, entries.length, true);
+  end.setUint32(12, dirSize, true);
+  end.setUint32(16, offset, true);
+
+  return new Blob([...parts, ...dir, new Uint8Array(end.buffer)], { type: 'application/zip' });
+}
+
+/* zip 꼬리의 차례표만 읽어 "무엇이 어디에 있는지"를 알아낸다 (내용은 필요할 때 잘라 쓴다) */
+async function readZipIndex(blob) {
+  const tailLen = Math.min(blob.size, 66000);
+  const tail = new Uint8Array(await blob.slice(blob.size - tailLen).arrayBuffer());
+  let p = -1;
+  for (let i = tail.length - 22; i >= 0; i--) {
+    if (tail[i] === 0x50 && tail[i + 1] === 0x4b && tail[i + 2] === 0x05 && tail[i + 3] === 0x06) { p = i; break; }
+  }
+  if (p < 0) throw new Error('zip 파일이 아닙니다.');
+
+  const end = new DataView(tail.buffer, p, 22);
+  const count  = end.getUint16(8, true);
+  const dirLen = end.getUint32(12, true);
+  const dirAt  = end.getUint32(16, true);
+
+  const dir = new DataView(await blob.slice(dirAt, dirAt + dirLen).arrayBuffer());
+  const dec = new TextDecoder();
+  const list = [];
+  let q = 0;
+  for (let i = 0; i < count; i++) {
+    if (q + 46 > dir.byteLength || dir.getUint32(q, true) !== 0x02014b50) break;
+    const nameLen = dir.getUint16(q + 28, true);
+    list.push({
+      name: dec.decode(new Uint8Array(dir.buffer, q + 46, nameLen)),
+      method: dir.getUint16(q + 10, true),
+      compSize: dir.getUint32(q + 20, true),
+      at: dir.getUint32(q + 42, true)
+    });
+    q += 46 + nameLen + dir.getUint16(q + 30, true) + dir.getUint16(q + 32, true);
+  }
+  return list;
+}
+
+async function zipEntryBlob(zip, e) {
+  const head = new DataView(await zip.slice(e.at, e.at + 30).arrayBuffer());
+  const from = e.at + 30 + head.getUint16(26, true) + head.getUint16(28, true);
+  const slice = zip.slice(from, from + e.compSize);
+  if (e.method === 0) return slice;
+  // 우리가 만든 백업은 압축이 없지만, 사용자가 맥에서 다시 묶은 파일도 받아 준다
+  if (e.method === 8 && typeof DecompressionStream === 'function')
+    return new Response(slice.stream().pipeThrough(new DecompressionStream('deflate-raw'))).blob();
+  throw new Error('이 백업 파일의 압축 방식은 읽을 수 없습니다.');
+}
+
+function backupFileName() {
+  const d = new Date();
+  const two = n => String(n).padStart(2, '0');
+  return `차트백업_${d.getFullYear()}-${two(d.getMonth() + 1)}-${two(d.getDate())}.zip`;
+}
+
+/* 만들어 둔 백업 파일. [저장하기]를 누르는 순간엔 기다릴 틈이 없어서 미리 만들어 둔다
+   (아이패드는 공유창을 손가락이 떼어진 직후에 바로 열지 않으면 막아 버린다) */
+let backupBlob = null;
+let backupName = '';
+
+async function buildBackup() {
+  const entries = [];
+  const charts = [];
+  let n = 0;
+
+  for (const c of CHARTS) {
+    busy(`백업을 만드는 중…  ${n + 1} / ${CHARTS.length}`);
+    let rec = null;
+    try { rec = await getFile(c.file); } catch (err) { console.error(err); }
+    if (!rec?.blob) continue;      // 목록에만 남고 원본이 없는 차트는 건너뛴다
+    n++;
+    // 파일 이름을 그대로 쓰면 글자 깨짐·길이 문제가 생기므로 번호로 넣고 manifest 에 짝을 적어 둔다
+    const zipName = `charts/${String(n).padStart(4, '0')}.pdf`;
+    entries.push({ name: zipName, blob: rec.blob });
+    charts.push({ zip: zipName, file: c.file });
+  }
+
+  const manifest = {
+    app: 'navigraph-chart-viewer',
+    format: BACKUP_FORMAT,
+    savedAt: new Date().toISOString(),
+    charts,
+    // AI 열쇠(aiKey)는 넣지 않는다 — 이 기기 밖으로 나가지 않는다고 안내한 값이다
+    settings: { favorites, airports, favAirports, rotations, theme, aiNotes }
+  };
+  entries.unshift({
+    name: 'manifest.json',
+    blob: new Blob([JSON.stringify(manifest, null, 2)], { type: 'application/json' })
+  });
+
+  busy('백업을 묶는 중…');
+  const zip = await makeZip(entries);
+  busy(null);
+  return { zip, count: n };
+}
+
+function renderBackupTab() {
+  // 설정 창을 열 때마다 처음 상태로 되돌린다. 차트가 바뀐 뒤에도 예전 백업이 남아
+  // 그것이 저장되는 일을 막기 위함이다
+  backupBlob = null;
+  backupName = '';
+  const bytes = CHARTS.reduce((s, c) => s + (c.size || 0), 0);
+  $('#backup-state').textContent = CHARTS.length
+    ? `차트 ${CHARTS.length}개 · ${fmtSize(bytes)}`
+    : '넣어둔 차트가 없습니다';
+  $('#btn-backup-make').disabled = !CHARTS.length;
+  $('#btn-backup-save').disabled = !backupBlob;
+}
+
+function downloadBackup(file) {
+  const url = URL.createObjectURL(file);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = file.name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+}
+
+async function restoreBackup(file) {
+  busy('백업 파일을 읽는 중…');
+  let list = [], manifest = null, index = [];
+  try {
+    index = await readZipIndex(file);
+    const mf = index.find(e => e.name === 'manifest.json');
+    if (!mf) throw new Error('이 앱이 만든 백업 파일이 아닙니다.');
+    manifest = JSON.parse(await (await zipEntryBlob(file, mf)).text());
+    list = Array.isArray(manifest.charts) ? manifest.charts : [];
+  } catch (err) {
+    busy(null);
+    console.error(err);
+    alert(`백업 파일을 읽을 수 없습니다.\n\n${err?.message || ''}`);
+    return;
+  }
+  busy(null);
+
+  if (!confirm(`백업 안에 차트 ${list.length}개가 있습니다.\n` +
+               `(저장한 날: ${String(manifest.savedAt || '').slice(0, 10) || '알 수 없음'})\n\n` +
+               '지금 넣어둔 차트는 지우지 않고 되돌립니다.\n' +
+               '같은 이름의 차트는 백업 쪽으로 바뀝니다.\n\n불러올까요?')) return;
+
+  busy('백업에서 차트를 꺼내는 중…');
+  const byZipName = new Map(index.map(e => [e.name, e]));
+  const files = [];
+  for (const item of list) {
+    const e = byZipName.get(item.zip);
+    if (!e || !item.file) continue;
+    try {
+      files.push(new File([await zipEntryBlob(file, e)], item.file, { type: 'application/pdf' }));
+    } catch (err) { console.error(err); }
+  }
+
+  // 설정은 지금 값 위에 백업 값을 덮어 얹는다 (이 기기에만 있는 것이 사라지지 않게)
+  const s = manifest.settings || {};
+  if (Array.isArray(s.favorites))   { favorites   = [...new Set([...favorites, ...s.favorites])];     save(KEY_FAV, favorites); }
+  if (Array.isArray(s.favAirports)) { favAirports = [...new Set([...favAirports, ...s.favAirports])]; save(KEY_APT_FAV, favAirports); }
+  if (s.airports  && typeof s.airports  === 'object') { airports  = { ...airports,  ...s.airports  }; save(KEY_APT, airports); }
+  if (s.rotations && typeof s.rotations === 'object') { rotations = { ...rotations, ...s.rotations }; save(KEY_ROT, rotations); }
+  if (s.aiNotes   && typeof s.aiNotes   === 'object') { aiNotes   = { ...aiNotes,   ...s.aiNotes   }; save(KEY_AI_NOTES, aiNotes); }
+  if (s.theme === 'dark' || s.theme === 'light') applyTheme(s.theme);
+
+  busy(null);
+  if (files.length) {
+    await addFiles(files);          // 넣기·용량 부족 처리·목록 새로 그리기를 그대로 쓴다
+  } else {
+    await refreshLibrary();
+    toast('백업 안에 차트 파일이 없어 설정만 되돌렸습니다.');
+  }
+  renderAiTab();
+  renderBackupTab();
+}
+
 /* ── 10. 화면 연결 ────────────────────────────────────────────── */
 $('#search').addEventListener('input', e => {
   const q = e.target.value.trim();
@@ -1680,6 +1935,7 @@ function openSettings(tab = 'airport') {
   renderFileTable();
   renderThemeTab();
   renderAiTab();
+  renderBackupTab();
   showTab(tab);
   $('#settings-modal').hidden = false;
 }
@@ -1713,6 +1969,43 @@ $('#btn-ai-clear').addEventListener('click', () => {
   renderAiTab();
   panes.forEach((_, k) => updateBar(k));
   toast('저장된 해석을 모두 지웠습니다.');
+});
+
+/* 설정 창 — Backup 칸 (백업 만들기 · 불러오기) */
+$('#btn-backup-make').addEventListener('click', async () => {
+  if (!CHARTS.length) return;
+  try {
+    const { zip, count } = await buildBackup();
+    backupBlob = zip;
+    backupName = backupFileName();
+    $('#backup-state').textContent = `${backupName} · 차트 ${count}개 · ${fmtSize(zip.size)}`;
+    $('#btn-backup-save').disabled = false;
+    toast('백업 파일을 만들었습니다. 이어서 <b>저장하기</b>를 누르세요.');
+  } catch (err) {
+    busy(null);
+    console.error(err);
+    toast('백업을 만들지 못했습니다. 저장 공간이 모자라지 않은지 확인해 주세요.');
+  }
+});
+
+$('#btn-backup-save').addEventListener('click', async () => {
+  if (!backupBlob) return;
+  const file = new File([backupBlob], backupName, { type: 'application/zip' });
+  // 아이패드에서 아이클라우드에 넣는 길은 공유창(「파일에 저장」)뿐이다.
+  // 공유창이 없는 PC 브라우저에서는 그냥 내려받는다
+  if (navigator.canShare?.({ files: [file] })) {
+    try { await navigator.share({ files: [file], title: backupName }); }
+    catch (err) { if (err?.name !== 'AbortError') downloadBackup(file); }
+    return;
+  }
+  downloadBackup(file);
+});
+
+$('#btn-backup-load').addEventListener('click', () => $('#backup-input').click());
+$('#backup-input').addEventListener('change', async e => {
+  const file = e.target.files?.[0];
+  e.target.value = '';            // 같은 파일을 다시 골라도 반응하도록 비워 둔다
+  if (file) await restoreBackup(file);
 });
 
 /* AI 해석 창 */

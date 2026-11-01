@@ -688,11 +688,14 @@ input::placeholder { color: var(--text-dim); }
 /* 설정 창 위쪽 탭 (Airport · Files) */
 .modal-tabs {
   display: flex;
+  /* 탭이 다섯 개라 좁은 화면에서는 가로로 밀어 볼 수 있게 둔다 */
+  overflow-x: auto;
   gap: 6px;
   padding: 10px 18px 0;
   border-bottom: 1px solid var(--line);
 }
 .tab-btn {
+  flex: 0 0 auto;
   height: 36px;
   padding: 0 16px;
   border: 0;
@@ -825,6 +828,12 @@ input::placeholder { color: var(--text-dim); }
   border-top: 1px solid var(--line);
 }
 .ai-saved-count { flex: 1 1 auto; font-size: 12px; color: var(--text-dim); }
+
+/* ── Backup 칸 (설정) ─────────────────────── */
+.backup-step + .backup-step { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); }
+.backup-step > b { font-size: 13.5px; }
+.backup-tools { display: flex; align-items: center; gap: 10px; margin-top: 14px; }
+.backup-state { flex: 1 1 auto; min-width: 0; font-size: 12px; line-height: 1.4; color: var(--text-dim); word-break: break-all; }
 
 /* ── AI 해석 창 ───────────────────────────── */
 .ai-modal { width: 620px; }
