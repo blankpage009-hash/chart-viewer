@@ -1170,6 +1170,11 @@ body.is-fullscreen .viewer:not(.is-active) { display: none; }
   /* 즐겨찾기 공항 칩은 기본 9개 대신 4개까지만 보이고, 더 있으면 옆으로 밀어서 본다.
      247px = 칩 4개(58px×4) + 칩 사이 간격 3개(5px×3). 칩 개수·폭·간격을 바꾸면 여기도 같이 고칠 것 */
   .fav-airports { max-width: 247px; }
+
+  /* 세로 2분할이면 칸 폭이 약 367px 라 아이콘 8개가 자리를 다 먹어 제목이 통째로 안 보였다.
+     확대·축소는 두 손가락으로 되니 −/＋ 만 빼서 제목(맨 앞 차트 번호)이 보일 자리를 만든다 */
+  .viewers.split .viewer-bar [data-act="zoom-out"],
+  .viewers.split .viewer-bar [data-act="zoom-in"] { display: none; }
 }
 
 /* ── 화면이 좁을 때 (휴대폰 · 창을 많이 줄였을 때) ── */
