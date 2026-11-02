@@ -1012,49 +1012,65 @@ async function addFiles(fileList) {
     return;
   }
 
-  const known = new Set(CHARTS.map(c => c.file));
-  let added = 0, replaced = 0, failed = 0, full = false;
-  const count = f => { known.has(f.name) ? replaced++ : added++; };
-
+  const t = newTally();
   await keepAwake(true);          // 넣는 동안 화면이 꺼져 작업이 멈추지 않게
-  for (let i = 0; i < files.length; i += PUT_CHUNK) {
-    const group = files.slice(i, i + PUT_CHUNK);
-    busy(`차트를 넣는 중…  ${i + group.length} / ${files.length}`);
-    try {
-      await putFiles(group);
-      group.forEach(count);
-    } catch (err) {
-      console.error(err);
-      // 저장 공간이 꽉 찼으면 나머지도 어차피 안 들어가므로 멈춘다
-      if (err?.name === 'QuotaExceededError') { full = true; break; }
-      // 묶음이 통째로 실패했으면 한 장씩 다시 해 본다 (한 장이 문제여서 스무 장을 잃지 않게)
-      for (const f of group) {
-        try { await putFile(f); count(f); }
-        catch (e2) {
-          console.error(e2);
-          if (e2?.name === 'QuotaExceededError') { full = true; break; }
-          failed++;
-        }
-      }
-      if (full) break;
+  try {
+    for (let i = 0; i < files.length && !t.full; i += PUT_CHUNK) {
+      const group = files.slice(i, i + PUT_CHUNK);
+      busy(`차트를 넣는 중…  ${i + group.length} / ${files.length}`);
+      await storeGroup(group, t);
     }
+  } finally {
+    await keepAwake(false);
   }
-  await keepAwake(false);
 
   busy(null);
   await refreshLibrary();
+  reportTally(t, dropped ? `${dropped}개는 PDF가 아니라 제외` : '');
+}
 
-  if (full) {
-    toast(`저장 공간이 부족해 멈췄습니다. ${added + replaced}개까지 넣었습니다.<br>` +
+/* 몇 개 넣었는지 세는 표. Upload 와 백업 되돌리기가 같은 표를 쓴다 */
+function newTally() {
+  const known = new Set(CHARTS.map(c => c.file));
+  return {
+    added: 0, replaced: 0, failed: 0, full: false,
+    count(f) { known.has(f.name) ? this.replaced++ : this.added++; }
+  };
+}
+
+/* 묶음 하나를 창고에 넣는다 */
+async function storeGroup(group, t) {
+  try {
+    await putFiles(group);
+    group.forEach(f => t.count(f));
+    return;
+  } catch (err) {
+    console.error(err);
+    // 저장 공간이 꽉 찼으면 나머지도 어차피 안 들어가므로 멈춘다
+    if (err?.name === 'QuotaExceededError') { t.full = true; return; }
+  }
+  // 묶음이 통째로 실패했으면 한 장씩 다시 해 본다 (한 장이 문제여서 스무 장을 잃지 않게)
+  for (const f of group) {
+    try { await putFile(f); t.count(f); }
+    catch (err) {
+      console.error(err);
+      if (err?.name === 'QuotaExceededError') { t.full = true; return; }
+      t.failed++;
+    }
+  }
+}
+
+function reportTally(t, ...extra) {
+  if (t.full) {
+    toast(`저장 공간이 부족해 멈췄습니다. ${t.added + t.replaced}개까지 넣었습니다.<br>` +
           '안 보는 차트를 지우고 다시 해보세요.');
     return;
   }
-
   const msg = [
-    added    ? `${added}개 추가` : '',
-    replaced ? `${replaced}개 교체` : '',
-    failed   ? `${failed}개 실패` : '',
-    dropped  ? `${dropped}개는 PDF가 아니라 제외` : ''
+    t.added    ? `${t.added}개 추가` : '',
+    t.replaced ? `${t.replaced}개 교체` : '',
+    t.failed   ? `${t.failed}개 실패` : '',
+    ...extra
   ].filter(Boolean).join(' · ');
   toast(msg || '변경된 내용이 없습니다.');
 }
@@ -1517,11 +1533,46 @@ async function readZipIndex(blob) {
       name: dec.decode(new Uint8Array(dir.buffer, q + 46, nameLen)),
       method: dir.getUint16(q + 10, true),
       compSize: dir.getUint32(q + 20, true),
+      size: dir.getUint32(q + 24, true),
       at: dir.getUint32(q + 42, true)
     });
     q += 46 + nameLen + dir.getUint16(q + 30, true) + dir.getUint16(q + 32, true);
   }
+  // 파일마다 "다음 파일이 시작하는 곳"을 적어 둔다. 여러 개를 한 번에 잘라 읽을 때 끝을 알려고
+  const byAt = [...list].sort((a, b) => a.at - b.at);
+  byAt.forEach((e, k) => { e.end = k + 1 < byAt.length ? byAt[k + 1].at : dirAt; });
   return list;
+}
+
+/* 한 번에 읽어 올 크기의 한도. 큰 차트 몇 장이 몰려도 메모리가 넘치지 않게 */
+const READ_CAP = 16 * 1024 * 1024;
+
+/* 이어 붙어 있는 차트 여러 장을 zip 에서 한 번에 읽어, 따로 떨어진 파일로 만든다.
+   zip 을 가리키는 꼬리표(slice)째 창고에 넣으면 아이패드가 큰 zip 을 붙잡고 있다가 앱이
+   꺼져 버린다 (2026-11-02, 1188장 중 60장에서 처음 화면으로 돌아감). 그래서 내용을 복사한다.
+   읽지 못한 칸은 null 로 돌려준다 */
+async function readZipGroup(zip, group) {
+  const from = group[0].e.at;
+  let buf;
+  try { buf = await zip.slice(from, group[group.length - 1].e.end).arrayBuffer(); }
+  catch (err) { console.error(err); return group.map(() => null); }
+
+  const view = new DataView(buf);
+  const out = [];
+  for (const { e, file } of group) {
+    try {
+      // 맥에서 다시 묶어 압축된 것은 예전 길로 하나씩 푼다
+      const data = e.method === 0
+        ? (() => {
+            const p = e.at - from;
+            const start = p + 30 + view.getUint16(p + 26, true) + view.getUint16(p + 28, true);
+            return new Uint8Array(buf, start, e.compSize);
+          })()
+        : await zipEntryBlob(zip, e);
+      out.push(new File([data], file, { type: 'application/pdf' }));
+    } catch (err) { console.error(err); out.push(null); }
+  }
+  return out;
 }
 
 async function zipEntryBlob(zip, e) {
@@ -1624,19 +1675,8 @@ async function restoreBackup(file) {
   if (!confirm(`백업 안에 차트 ${list.length}개가 있습니다.\n` +
                `(저장한 날: ${String(manifest.savedAt || '').slice(0, 10) || '알 수 없음'})\n\n` +
                '지금 넣어둔 차트는 지우지 않고 되돌립니다.\n' +
-               '같은 이름의 차트는 백업 쪽으로 바뀝니다.\n\n불러올까요?')) return;
-
-  await keepAwake(true);          // 1000장이 넘으면 오래 걸린다. 화면이 꺼지면 중간에 멈춘다
-  const byZipName = new Map(index.map(e => [e.name, e]));
-  const files = [];
-  for (const item of list) {
-    busy(`백업에서 차트를 꺼내는 중…  ${files.length + 1} / ${list.length}`);
-    const e = byZipName.get(item.zip);
-    if (!e || !item.file) continue;
-    try {
-      files.push(new File([await zipEntryBlob(file, e)], item.file, { type: 'application/pdf' }));
-    } catch (err) { console.error(err); }
-  }
+               '이미 똑같이 들어 있는 차트는 건너뛰고,\n' +
+               '이름만 같은 차트는 백업 쪽으로 바뀝니다.\n\n불러올까요?')) return;
 
   // 설정은 지금 값 위에 백업 값을 덮어 얹는다 (이 기기에만 있는 것이 사라지지 않게)
   const s = manifest.settings || {};
@@ -1655,20 +1695,47 @@ async function restoreBackup(file) {
   if (s.aiNotes   && typeof s.aiNotes   === 'object') { aiNotes   = { ...aiNotes,   ...s.aiNotes   }; save(KEY_AI_NOTES, aiNotes); }
   if (s.theme === 'dark' || s.theme === 'light') applyTheme(s.theme);
 
-  busy(null);
+  const t = newTally();
+  const byZipName = new Map(index.map(e => [e.name, e]));
+  const have = new Map(CHARTS.map(c => [c.file, c.size]));
+  const todo = [];
+  let skipped = 0;
+  for (const item of list) {
+    const e = byZipName.get(item.zip);
+    if (!e || !item.file) { t.failed++; continue; }
+    // 이름·크기가 똑같으면 이미 들어 있는 차트다. 중간에 멈췄다가 다시 불러올 때
+    // 앞에서 넣어 둔 것을 금방 지나가게 한다
+    if (have.get(item.file) === e.size) { skipped++; continue; }
+    todo.push({ e, file: item.file });
+  }
+  // zip 안에 놓인 순서대로 해야 이웃한 차트를 한 번에 잘라 읽을 수 있다
+  todo.sort((a, b) => a.e.at - b.e.at);
+
+  await keepAwake(true);          // 1000장이 넘으면 오래 걸린다. 화면이 꺼지면 중간에 멈춘다
   try {
-    if (files.length) {
-      await addFiles(files);        // 넣기·용량 부족 처리·목록 새로 그리기를 그대로 쓴다
-    } else {
-      await refreshLibrary();
-      toast('백업 안에 차트 파일이 없어 설정만 되돌렸습니다.');
+    // 꺼내기와 넣기를 묶음마다 번갈아 한다. 다 꺼내 놓고 넣으면 1000장이 한꺼번에 메모리에 올라간다
+    for (let k = 0; k < todo.length && !t.full; ) {
+      const start = todo[k].e.at;
+      let n = 1;
+      while (k + n < todo.length && n < PUT_CHUNK && todo[k + n].e.end - start <= READ_CAP) n++;
+      const group = todo.slice(k, k += n);
+      busy(`백업에서 차트를 되돌리는 중…  ${skipped + k} / ${list.length}`);
+      const files = await readZipGroup(file, group);
+      const ok = files.filter(Boolean);
+      t.failed += files.length - ok.length;
+      if (ok.length) await storeGroup(ok, t);
     }
   } finally {
     // 중간에 잘못되더라도 화면 붙잡은 것은 반드시 놓아 준다 (안 그러면 배터리가 샌다)
     await keepAwake(false);
+    busy(null);
   }
+
+  await refreshLibrary();
   renderAiTab();
   renderBackupTab();
+  if (!list.length) toast('백업 안에 차트 파일이 없어 설정만 되돌렸습니다.');
+  else reportTally(t, skipped ? `${skipped}개는 이미 있어 건너뜀` : '');
 }
 
 /* ── 10. 화면 연결 ────────────────────────────────────────────── */
