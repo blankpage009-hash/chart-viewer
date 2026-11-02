@@ -4,7 +4,7 @@
 
 /* ★★ 앱을 고쳐서 다시 올릴 때는 아래 번호를 1 올릴 것 (ncv-v1 → ncv-v2).
        안 올리면 아이패드가 예전 화면을 계속 쓴다. ★★ */
-const CACHE = 'ncv-v49';  // v49: AI 해석 창 680×640 · 요소/제원 표 시안 모양 · 닫기 버튼 통일
+const CACHE = 'ncv-v50';  // v50: 앱 아이콘 4c · theme-color 먹색
 // (예: ILS DA(H) 238 ft (200 ft)) (2026-08-08)
 
 const APP_FILES = [
@@ -14,6 +14,8 @@ const APP_FILES = [
   './app.js',
   './manifest.webmanifest',
   './icon.png',
+  './icon-maskable.png',
+  './apple-touch-icon.png',
   './jeppesen_icon.png',
   './archivo-latin.woff2',
   './pdfjs/pdf.min.mjs',

@@ -6,10 +6,10 @@
   "scope": "./",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#ffffff",
-  "theme_color": "#123a5e",
+  "background_color": "#201e1d",
+  "theme_color": "#201e1d",
   "icons": [
     { "src": "./icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "./icon.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    { "src": "./icon-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }
