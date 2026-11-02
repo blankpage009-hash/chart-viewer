@@ -867,50 +867,81 @@ function attachChartSwipe(i) {
 /* ── 8. 확대 · 축소 ───────────────────────────────────────────── */
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
-async function setZoom(i, next) {
+// 처음 맞춘 크기(100%)보다 작게 볼 일은 없어서 1을 바닥으로 둔다
+const ZOOM_MIN = 1, ZOOM_MAX = 8;
+
+// 화면의 (x, y) 지점이 차트 그림의 가로·세로 몇 % 자리에 있는지.
+// 비율로 기억해야 다시 그려서 크기가 바뀐 뒤에도 같은 자리를 찾을 수 있다
+function anchorAt(i, x, y) {
+  const r = canvasEl(i).getBoundingClientRect();
+  return { u: (x - r.left) / r.width, v: (y - r.top) / r.height, x, y };
+}
+
+async function setZoom(i, next, anchor) {
   const p = panes[i];
   if (!p.page) return;
   const body = bodyEl(i);
   const prev = p.zoom;
-  p.zoom = clamp(next, 0.5, 8);
+  p.zoom = clamp(next, ZOOM_MIN, ZOOM_MAX);
   if (p.zoom === prev) return;
 
-  // 확대 전 화면 한가운데에 있던 지점을 확대 후에도 가운데 두기 위한 값
-  const cx = (body.scrollLeft + body.clientWidth  / 2) / prev;
-  const cy = (body.scrollTop  + body.clientHeight / 2) / prev;
+  // 기준점을 안 주면(버튼·휠) 지금처럼 화면 한가운데를 기준으로 키운다
+  if (!anchor) {
+    const b = body.getBoundingClientRect();
+    anchor = anchorAt(i, b.left + b.width / 2, b.top + b.height / 2);
+  }
 
   await drawPage(i);
 
-  body.scrollLeft = cx * p.zoom - body.clientWidth  / 2;
-  body.scrollTop  = cy * p.zoom - body.clientHeight / 2;
+  // 다시 그린 뒤, 기준점이 원래 있던 화면 자리로 오도록 스크롤을 옮긴다
+  const r = canvasEl(i).getBoundingClientRect();
+  body.scrollLeft += r.left + anchor.u * r.width  - anchor.x;
+  body.scrollTop  += r.top  + anchor.v * r.height - anchor.y;
 }
 
-/* 두 손가락 확대: 손가락을 떼기 전에는 그림을 늘려 보여주고, 떼면 그때 다시 그린다 */
+/* 두 손가락 확대: 손가락을 떼기 전에는 그림을 늘려 보여주고, 떼면 그때 다시 그린다.
+   손가락 사이 지점을 기준으로 키워야 보고 있던 곳이 화면 밖으로 달아나지 않는다 */
 function attachPinch(i) {
   const body = bodyEl(i);
-  let startDist = 0, live = 1;
+  let startDist = 0, live = 1, anchor = null, midX = 0, midY = 0;
 
   const dist = t =>
     Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+  const mid = t =>
+    [(t[0].clientX + t[1].clientX) / 2, (t[0].clientY + t[1].clientY) / 2];
 
   body.addEventListener('touchstart', e => {
     if (e.touches.length !== 2 || !panes[i].page) return;
     startDist = dist(e.touches);
     live = 1;
+    [midX, midY] = mid(e.touches);
+    anchor = anchorAt(i, midX, midY);
+    canvasEl(i).style.transformOrigin = `${anchor.u * 100}% ${anchor.v * 100}%`;
   }, { passive: true });
 
   body.addEventListener('touchmove', e => {
     if (e.touches.length !== 2 || !startDist) return;
     e.preventDefault();
-    live = clamp(dist(e.touches) / startDist, 0.25, 4);
-    canvasEl(i).style.transform = `scale(${live})`;
+    const z = panes[i].zoom;
+    live = clamp(dist(e.touches) / startDist, ZOOM_MIN / z, ZOOM_MAX / z);
+    [midX, midY] = mid(e.touches);
+    // 확대하면서 두 손가락을 함께 옮기면 그림도 따라오게 한다
+    canvasEl(i).style.transform =
+      `translate(${midX - anchor.x}px, ${midY - anchor.y}px) scale(${live})`;
   }, { passive: false });
 
   const end = () => {
     if (!startDist) return;
     startDist = 0;
-    canvasEl(i).style.transform = '';
-    if (Math.abs(live - 1) > 0.02) setZoom(i, panes[i].zoom * live);
+    const c = canvasEl(i);
+    c.style.transform = '';
+    c.style.transformOrigin = '';
+    if (Math.abs(live - 1) > 0.02) {
+      setZoom(i, panes[i].zoom * live, { ...anchor, x: midX, y: midY });
+    } else {
+      body.scrollLeft -= midX - anchor.x;
+      body.scrollTop  -= midY - anchor.y;
+    }
     live = 1;
   };
   body.addEventListener('touchend', end);
